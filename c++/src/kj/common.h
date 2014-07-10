@@ -27,7 +27,7 @@
 #define KJ_COMMON_H_
 
 #ifndef KJ_NO_COMPILER_CHECK
-#if __cplusplus < 201103L && !__CDT_PARSER__
+#if __cplusplus < 201103L && !__CDT_PARSER__ && _MSC_VER < 1900
   #error "This code requires C++11. Either your compiler does not support it or it is not enabled."
   #ifdef __GNUC__
     // Compiler claims compatibility with GCC, so presumably supports -std.
@@ -56,17 +56,45 @@
       #warning "This library requires at least GCC 4.7."
     #endif
   #endif
+#define CONSTEXPR_RETURN constexpr
+#define CONSTEXPR_CLASS_OBJECT constexpr
+#define KJ_CONSTEXPR(fallback) constexpr
+#define KJ_RESTRICT __restrict__
+#elif _MSC_VER >= 1900
+// VS14 (CTP) - let's give it a try
+// Define architecture here so we can compile without dragging in the kitchen sink from <windows.h>
+#if !defined(_X86_) && !defined(_IA64_) && !defined(_AMD64_) && !defined(_ARM_) && defined(_M_IX86)
+#define _X86_
+#elif !defined(_X86_) && !defined(_IA64_) && !defined(_AMD64_) && !defined(_ARM_) && defined(_M_AMD64)
+#define _AMD64_
+#endif
+// turn on various hacks elsewhere
+#define MSVC_HACKS
+// VC++ barfs on various uses of constexpr on return values with messages like common.h(1054) : error C3757 : 'kj::ArrayPtr<T>' : type not allowed for 'constexpr' function
+#define CONSTEXPR_RETURN
+// VC++ doesn't support literal class objects - get messages like string.h(294): error C2127: 'kj::_::STR': illegal initialization of 'constexpr' entity with a non-constant expression
+#define CONSTEXPR_CLASS_OBJECT const
+// other constexpr cases
+#define KJ_CONSTEXPR(fallback) fallback
+#define KJ_RESTRICT __restrict
+// Turn off warning "'constexpr' call evaluation failed; function will be called at run-time" because there are a lot of constexpr functions called that way in this codebase.
+#pragma warning (disable: 4592)
 #elif defined(_MSC_VER)
-  #warning "As of June 2013, Visual Studio's C++11 support was hopelessly behind what is needed to compile this code."
+  #pragma message("As of June 2013, Visual Studio's C++11 support was hopelessly behind what is needed to compile this code.")
 #else
   #warning "I don't recognize your compiler.  As of this writing, Clang and GCC are the only "\
            "known compilers with enough C++11 support for this library.  "\
            "#define KJ_NO_COMPILER_CHECK to make this warning go away."
+// you may need different implementations of these:
+#define CONSTEXPR_RETURN constexpr
+#define CONSTEXPR_CLASS_OBJECT constexpr
+#define KJ_RESTRICT __restrict__
 #endif
 #endif
 
 #include <stddef.h>
 #include <initializer_list>
+#include <type_traits>
 
 // =======================================================================================
 
@@ -116,6 +144,7 @@ typedef unsigned char byte;
   classname& operator=(const classname&) = delete
 // Deletes the implicit copy constructor and assignment operator.
 
+#ifdef __GNUC__
 #define KJ_LIKELY(condition) __builtin_expect(condition, true)
 #define KJ_UNLIKELY(condition) __builtin_expect(condition, false)
 // Branch prediction macros.  Evaluates to the condition given, but also tells the compiler that we
@@ -134,6 +163,16 @@ typedef unsigned char byte;
 #define KJ_UNUSED __attribute__((unused))
 
 #define KJ_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+// non-GNUC implementations of above macros
+#define KJ_LIKELY(condition) (condition)
+#define KJ_UNLIKELY(condition) (condition)
+// TODO: add back MSVC's __forceinline
+#define KJ_ALWAYS_INLINE(prototype) inline prototype
+#define KJ_NORETURN 
+#define KJ_UNUSED 
+#define KJ_WARN_UNUSED_RESULT 
+#endif
 
 #if __clang__
 #define KJ_UNUSED_MEMBER __attribute__((unused))
@@ -159,7 +198,7 @@ void unreachable() KJ_NORETURN;
 #ifdef KJ_DEBUG
 #define KJ_IREQUIRE(condition, ...) \
     if (KJ_LIKELY(condition)); else ::kj::_::inlineRequireFailure( \
-        __FILE__, __LINE__, #condition, #__VA_ARGS__, ##__VA_ARGS__)
+        __FILE__, __LINE__, #condition, "" #__VA_ARGS__, ##__VA_ARGS__)
 // Version of KJ_DREQUIRE() which is safe to use in headers that are #included by users.  Used to
 // check preconditions inside inline methods.  KJ_IREQUIRE is particularly useful in that
 // it will be enabled depending on whether the application is compiled in debug mode rather than
@@ -167,7 +206,7 @@ void unreachable() KJ_NORETURN;
 
 #define KJ_IASSERT(condition, ...) \
     if (KJ_LIKELY(condition)); else ::kj::_::inlineAssertFailure( \
-        __FILE__, __LINE__, #condition, #__VA_ARGS__, ##__VA_ARGS__)
+        __FILE__, __LINE__, #condition, "" #__VA_ARGS__, ##__VA_ARGS__)
 // Version of KJ_DASSERT() which is safe to use in headers that are #included by users.  Used to
 // check state inside inline and templated methods.
 #else
@@ -191,7 +230,7 @@ void unreachable() KJ_NORETURN;
 // variable-sized arrays.  For other compilers we could just use a fixed-size array.  `minStack`
 // is the stack array size to use if variable-width arrays are not supported.  `maxStack` is the
 // maximum stack array size if variable-width arrays *are* supported.
-#if __clang__
+#if __clang__ || _MSC_VER
 #define KJ_STACK_ARRAY(type, name, size, minStack, maxStack) \
   size_t name##_size = (size); \
   bool name##_isOnStack = name##_size <= (minStack); \
@@ -244,6 +283,12 @@ template <typename T, size_t s> struct Decay_<const T[s]> { typedef typename Dec
 template <typename T> struct Decay_<const T> { typedef typename Decay_<T>::Type Type; };
 template <typename T> struct Decay_<volatile T> { typedef typename Decay_<T>::Type Type; };
 template <typename T> using Decay = typename Decay_<T>::Type;
+
+#ifdef MSVC_HACKS
+#define KJ_DECAY(T) kj::Decay_<T>::Type
+#else
+#define KJ_DECAY(T) kj::Decay<T>
+#endif
 
 template <bool b> struct EnableIf_;
 template <> struct EnableIf_<true> { typedef void Type; };
@@ -374,6 +419,19 @@ constexpr bool canMemcpy() {
 // that the cost of typing more letters outweighs the cost of being slightly harder to understand
 // when first encountered.
 
+#if defined(MSVC_HACKS)
+template<typename T> T&& mv(T& t) noexcept { return static_cast<T&&>(t); }
+template<typename T> T&& fwd(NoInfer<T>& t) noexcept { return static_cast<T&&>(t); }
+
+template<typename T> T cp(T& t) noexcept { return t; }
+template<typename T> T cp(const T& t) noexcept { return t; }
+// Useful to force a copy, particularly to pass into a function that expects T&&.
+
+template <typename T, typename U>
+inline auto min(T&& a, U&& b) -> typename std::remove_reference<decltype(a < b ? a : b)>::type { return a < b ? a : b; }
+template <typename T, typename U>
+inline auto max(T&& a, U&& b) -> typename std::remove_reference<decltype(a > b ? a : b)>::type{ return a > b ? a : b; }
+#else
 template<typename T> constexpr T&& mv(T& t) noexcept { return static_cast<T&&>(t); }
 template<typename T> constexpr T&& fwd(NoInfer<T>& t) noexcept { return static_cast<T&&>(t); }
 
@@ -385,11 +443,12 @@ template <typename T, typename U>
 inline constexpr auto min(T&& a, U&& b) -> decltype(a < b ? a : b) { return a < b ? a : b; }
 template <typename T, typename U>
 inline constexpr auto max(T&& a, U&& b) -> decltype(a > b ? a : b) { return a > b ? a : b; }
+#endif
 
 template <typename T, size_t s>
-inline constexpr size_t size(T (&arr)[s]) { return s; }
+inline CONSTEXPR_RETURN size_t size(T(&arr)[s]) { return s; }
 template <typename T>
-inline constexpr size_t size(T&& arr) { return arr.size(); }
+inline CONSTEXPR_RETURN size_t size(T&& arr) { return arr.size(); }
 // Returns the size of the parameter, whether the parameter is a regular C array or a container
 // with a `.size()` method.
 
@@ -406,8 +465,8 @@ private:
 
 public:
 #define _kJ_HANDLE_TYPE(T) \
-  inline constexpr operator   signed T() const { return MaxValue_::maxSigned  <  signed T>(); } \
-  inline constexpr operator unsigned T() const { return MaxValue_::maxUnsigned<unsigned T>(); }
+  inline CONSTEXPR_RETURN operator   signed T() const { return MaxValue_::maxSigned  <  signed T>(); } \
+  inline CONSTEXPR_RETURN operator unsigned T() const { return MaxValue_::maxUnsigned<unsigned T>(); }
   _kJ_HANDLE_TYPE(char)
   _kJ_HANDLE_TYPE(short)
   _kJ_HANDLE_TYPE(int)
@@ -436,8 +495,8 @@ private:
 
 public:
 #define _kJ_HANDLE_TYPE(T) \
-  inline constexpr operator   signed T() const { return MinValue_::minSigned  <  signed T>(); } \
-  inline constexpr operator unsigned T() const { return MinValue_::minUnsigned<unsigned T>(); }
+  inline CONSTEXPR_RETURN operator   signed T() const { return MinValue_::minSigned  <  signed T>(); } \
+  inline CONSTEXPR_RETURN operator unsigned T() const { return MinValue_::minUnsigned<unsigned T>(); }
   _kJ_HANDLE_TYPE(char)
   _kJ_HANDLE_TYPE(short)
   _kJ_HANDLE_TYPE(int)
@@ -453,22 +512,34 @@ public:
   }
 };
 
-static constexpr MaxValue_ maxValue = MaxValue_();
+static CONSTEXPR_CLASS_OBJECT MaxValue_ maxValue = MaxValue_();
 // A special constant which, when cast to an integer type, takes on the maximum possible value of
 // that type.  This is useful to use as e.g. a parameter to a function because it will be robust
 // in the face of changes to the parameter's type.
 //
 // `char` is not supported, but `signed char` and `unsigned char` are.
 
-static constexpr MinValue_ minValue = MinValue_();
+static CONSTEXPR_CLASS_OBJECT MinValue_ minValue = MinValue_();
 // A special constant which, when cast to an integer type, takes on the minimum possible value
 // of that type.  This is useful to use as e.g. a parameter to a function because it will be robust
 // in the face of changes to the parameter's type.
 //
 // `char` is not supported, but `signed char` and `unsigned char` are.
 
+#ifdef __GNUC__
 inline constexpr float inf() { return __builtin_huge_valf(); }
 inline constexpr float nan() { return __builtin_nanf(""); }
+#elif defined(_MSC_VER)
+// copy these here rather than #including <math.h> - seems to be in keeping with what is done hereabouts
+#define _HUGE_ENUF  1e+300  // _HUGE_ENUF*_HUGE_ENUF must overflow
+#define INFINITY   ((float)(_HUGE_ENUF * _HUGE_ENUF))
+#define HUGE_VAL   ((double)INFINITY)
+#define NAN        ((float)(INFINITY * 0.0F))
+inline constexpr float inf() { return HUGE_VAL; }
+inline constexpr float nan() { return NAN; }
+#else
+#warning "put definitions for inf and nan for your compiler here"
+#endif
 
 // =======================================================================================
 // Useful fake containers
@@ -476,7 +547,7 @@ inline constexpr float nan() { return __builtin_nanf(""); }
 template <typename T>
 class Range {
 public:
-  inline constexpr Range(const T& begin, const T& end): begin_(begin), end_(end) {}
+  inline CONSTEXPR_RETURN Range(const T& begin, const T& end): begin_(begin), end_(end) {}
 
   class Iterator {
   public:
@@ -517,7 +588,7 @@ private:
 };
 
 template <typename T>
-inline constexpr Range<Decay<T>> range(T begin, T end) { return Range<Decay<T>>(begin, end); }
+inline CONSTEXPR_RETURN Range<Decay<T>> range(T begin, T end) { return Range<Decay<T>>(begin, end); }
 // Returns a fake iterable container containing all values of T from `begin` (inclusive) to `end`
 // (exclusive).  Example:
 //
@@ -525,7 +596,7 @@ inline constexpr Range<Decay<T>> range(T begin, T end) { return Range<Decay<T>>(
 //     for (int i: kj::range(1, 10)) { print(i); }
 
 template <typename T>
-inline constexpr Range<size_t> indices(T&& container) {
+inline CONSTEXPR_RETURN Range<size_t> indices(T&& container) {
   // Shortcut for iterating over the indices of a container:
   //
   //     for (size_t i: kj::indices(myArray)) { handle(myArray[i]); }
@@ -536,7 +607,7 @@ inline constexpr Range<size_t> indices(T&& container) {
 template <typename T>
 class Repeat {
 public:
-  inline constexpr Repeat(const T& value, size_t count): value(value), count(count) {}
+  inline CONSTEXPR_RETURN Repeat(const T& value, size_t count): value(value), count(count) {}
 
   class Iterator {
   public:
@@ -643,6 +714,12 @@ template <typename T>
 class Maybe;
 
 namespace _ {  // private
+
+#if defined(_MSC_VER)
+#pragma warning( push )
+#pragma warning( disable: 4521 )	// "multiple copy constructors specified" - is intentional in this class
+#pragma warning( disable: 4522 )	// "multiple assignment operators specified" - is intentional in this class
+#endif
 
 template <typename T>
 class NullableValue {
@@ -945,6 +1022,10 @@ private:
   friend U* _::readMaybe(const Maybe<U&>& maybe);
 };
 
+#if defined(_MSC_VER)
+#pragma warning( pop )	// put warnings back the way they were
+#endif
+
 // =======================================================================================
 // ArrayPtr
 //
@@ -956,15 +1037,15 @@ class ArrayPtr: public DisallowConstCopyIfNotConst<T> {
   // and passing by value only copies the pointer, not the target.
 
 public:
-  inline constexpr ArrayPtr(): ptr(nullptr), size_(0) {}
-  inline constexpr ArrayPtr(decltype(nullptr)): ptr(nullptr), size_(0) {}
-  inline constexpr ArrayPtr(T* ptr, size_t size): ptr(ptr), size_(size) {}
-  inline constexpr ArrayPtr(T* begin, T* end): ptr(begin), size_(end - begin) {}
-  inline constexpr ArrayPtr(std::initializer_list<RemoveConstOrDisable<T>> init)
+  inline CONSTEXPR_RETURN ArrayPtr(): ptr(nullptr), size_(0) {}
+  inline CONSTEXPR_RETURN ArrayPtr(decltype(nullptr)) : ptr(nullptr), size_(0) {}
+  inline CONSTEXPR_RETURN ArrayPtr(T* ptr, size_t size) : ptr(ptr), size_(size) {}
+  inline CONSTEXPR_RETURN ArrayPtr(T* begin, T* end) : ptr(begin), size_(end - begin) {}
+  inline CONSTEXPR_RETURN ArrayPtr(std::initializer_list<RemoveConstOrDisable<T>> init)
       : ptr(init.begin()), size_(init.size()) {}
 
   template <size_t size>
-  inline constexpr ArrayPtr(T (&native)[size]): ptr(native), size_(size) {}
+  inline CONSTEXPR_RETURN ArrayPtr(T (&native)[size]): ptr(native), size_(size) {}
   // Construct an ArrayPtr from a native C-style array.
 
   inline operator ArrayPtr<const T>() const {
@@ -1020,13 +1101,13 @@ private:
 };
 
 template <typename T>
-inline constexpr ArrayPtr<T> arrayPtr(T* ptr, size_t size) {
+inline CONSTEXPR_RETURN ArrayPtr<T> arrayPtr(T* ptr, size_t size) {
   // Use this function to construct ArrayPtrs without writing out the type name.
   return ArrayPtr<T>(ptr, size);
 }
 
 template <typename T>
-inline constexpr ArrayPtr<T> arrayPtr(T* begin, T* end) {
+inline CONSTEXPR_RETURN ArrayPtr<T> arrayPtr(T* begin, T* end) {
   // Use this function to construct ArrayPtrs without writing out the type name.
   return ArrayPtr<T>(begin, end);
 }

@@ -657,7 +657,7 @@ private:
     //   Capability.
   };
 
-  template <typename T, Kind kind = kind<T>()> struct AsImpl;
+  template <typename T, Kind kind = CAPNP_KIND(T)> struct AsImpl;
   // Implementation backing the as() method.  Needs to be a struct to allow partial
   // specialization.  Has a method apply() which does the work.
 
@@ -733,7 +733,7 @@ private:
     // Declared mutable because `Client`s normally cannot be const.
   };
 
-  template <typename T, Kind kind = kind<T>()> struct AsImpl;
+  template <typename T, Kind kind = CAPNP_KIND(T)> struct AsImpl;
   // Implementation backing the as() method.  Needs to be a struct to allow partial
   // specialization.  Has a method apply() which does the work.
 
@@ -765,7 +765,7 @@ private:
     DynamicCapability::Client capabilityValue;
   };
 
-  template <typename T, Kind kind = kind<T>()> struct AsImpl;
+  template <typename T, Kind kind = CAPNP_KIND(T)> struct AsImpl;
   // Implementation backing the releaseAs() method.  Needs to be a struct to allow partial
   // specialization.  Has a method apply() which does the work.
 };

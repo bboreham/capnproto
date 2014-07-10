@@ -34,13 +34,13 @@ typedef Quantity<int, Bytes> ByteCount;
 typedef Quantity<int, KiB> KiBCount;
 typedef Quantity<int, MiB> MiBCount;
 
-constexpr ByteCount BYTE = unit<ByteCount>();
-constexpr KiBCount KIB = unit<KiBCount>();
-constexpr MiBCount MIB = unit<MiBCount>();
+CONSTEXPR_CLASS_OBJECT ByteCount BYTE = unit<ByteCount>();
+CONSTEXPR_CLASS_OBJECT KiBCount KIB = unit<KiBCount>();
+CONSTEXPR_CLASS_OBJECT MiBCount MIB = unit<MiBCount>();
 
-constexpr UnitRatio<int, Bytes, KiB> BYTES_PER_KIB = 1024 * BYTE / KIB;
-constexpr UnitRatio<int, Bytes, MiB> BYTES_PER_MIB = 1024 * 1024 * BYTE / MIB;
-constexpr auto KIB_PER_MIB = 1024 * KIB / MIB;
+CONSTEXPR_CLASS_OBJECT UnitRatio<int, Bytes, KiB> BYTES_PER_KIB = 1024 * BYTE / KIB;
+CONSTEXPR_CLASS_OBJECT UnitRatio<int, Bytes, MiB> BYTES_PER_MIB = 1024 * 1024 * BYTE / MIB;
+CONSTEXPR_CLASS_OBJECT auto KIB_PER_MIB = 1024 * KIB / MIB;
 
 template <typename T, typename U>
 std::ostream& operator<<(std::ostream& os, Quantity<T, U> value) {

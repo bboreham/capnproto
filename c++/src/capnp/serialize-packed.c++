@@ -39,7 +39,7 @@ size_t PackedInputStream::tryRead(void* dst, size_t minBytes, size_t maxBytes) {
   KJ_DREQUIRE(minBytes % sizeof(word) == 0, "PackedInputStream reads must be word-aligned.");
   KJ_DREQUIRE(maxBytes % sizeof(word) == 0, "PackedInputStream reads must be word-aligned.");
 
-  uint8_t* __restrict__ out = reinterpret_cast<uint8_t*>(dst);
+  uint8_t* KJ_RESTRICT out = reinterpret_cast<uint8_t*>(dst);
   uint8_t* const outEnd = reinterpret_cast<uint8_t*>(dst) + maxBytes;
   uint8_t* const outMin = reinterpret_cast<uint8_t*>(dst) + minBytes;
 
@@ -47,7 +47,7 @@ size_t PackedInputStream::tryRead(void* dst, size_t minBytes, size_t maxBytes) {
   if (buffer.size() == 0) {
     return 0;
   }
-  const uint8_t* __restrict__ in = reinterpret_cast<const uint8_t*>(buffer.begin());
+  const uint8_t* KJ_RESTRICT in = reinterpret_cast<const uint8_t*>(buffer.begin());
 
 #define REFRESH_BUFFER() \
   inner.skip(buffer.size()); \
@@ -190,7 +190,7 @@ void PackedInputStream::skip(size_t bytes) {
   KJ_DREQUIRE(bytes % sizeof(word) == 0, "PackedInputStream reads must be word-aligned.");
 
   kj::ArrayPtr<const byte> buffer = inner.getReadBuffer();
-  const uint8_t* __restrict__ in = reinterpret_cast<const uint8_t*>(buffer.begin());
+  const uint8_t* KJ_RESTRICT in = reinterpret_cast<const uint8_t*>(buffer.begin());
 
 #define REFRESH_BUFFER() \
   inner.skip(buffer.size()); \
@@ -306,9 +306,9 @@ void PackedOutputStream::write(const void* src, size_t size) {
   kj::ArrayPtr<byte> buffer = inner.getWriteBuffer();
   byte slowBuffer[20];
 
-  uint8_t* __restrict__ out = reinterpret_cast<uint8_t*>(buffer.begin());
+  uint8_t* KJ_RESTRICT out = reinterpret_cast<uint8_t*>(buffer.begin());
 
-  const uint8_t* __restrict__ in = reinterpret_cast<const uint8_t*>(src);
+  const uint8_t* KJ_RESTRICT in = reinterpret_cast<const uint8_t*>(src);
   const uint8_t* const inEnd = reinterpret_cast<const uint8_t*>(src) + size;
 
   while (in < inEnd) {

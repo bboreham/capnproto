@@ -48,7 +48,7 @@ struct Void {
   inline constexpr bool operator!=(Void other) const { return false; }
 };
 
-static constexpr Void VOID = Void();
+static CONSTEXPR_CLASS_OBJECT Void VOID = Void();
 // Constant value for `Void`,  which is an empty struct.
 
 template <typename T>
@@ -94,8 +94,19 @@ inline constexpr Kind kind() {
   return _::Kind_<T>::kind;
 }
 
-template <typename T, Kind k = kind<T>()>
+// MSVC (as of CTP June 14) doesn't seem to get that constexpr kind here is a constant expression; claims it is a variable
+#ifdef MSVC_HACKS
+#define CAPNP_KIND(T) ::capnp::_::Kind_<T>::kind
+#else
+#define CAPNP_KIND(T) ::capnp::kind<T>()
+#endif
+
+template <typename T, Kind k = CAPNP_KIND(T)>
 struct List;
+#ifdef MSVC_HACKS
+template <typename T, Kind k = CAPNP_KIND(T)>
+struct List {}; // to get round friend problem
+#endif
 
 template <typename T> struct ListElementType_;
 template <typename T> struct ListElementType_<List<T>> { typedef T Type; };
@@ -119,49 +130,53 @@ namespace _ {  // private
 template <> struct Kind_<Capability> { static constexpr Kind kind = Kind::INTERFACE; };
 }  // namespace _ (private)
 
-template <typename T, Kind k = kind<T>()> struct ReaderFor_ { typedef typename T::Reader Type; };
+template <typename T, Kind k = CAPNP_KIND(T)> struct ReaderFor_ { typedef typename T::Reader Type; };
 template <typename T> struct ReaderFor_<T, Kind::PRIMITIVE> { typedef T Type; };
 template <typename T> struct ReaderFor_<T, Kind::ENUM> { typedef T Type; };
 template <typename T> struct ReaderFor_<T, Kind::INTERFACE> { typedef typename T::Client Type; };
 template <typename T> using ReaderFor = typename ReaderFor_<T>::Type;
 // The type returned by List<T>::Reader::operator[].
 
-template <typename T, Kind k = kind<T>()> struct BuilderFor_ { typedef typename T::Builder Type; };
+template <typename T, Kind k = CAPNP_KIND(T)> struct BuilderFor_ { typedef typename T::Builder Type; };
 template <typename T> struct BuilderFor_<T, Kind::PRIMITIVE> { typedef T Type; };
 template <typename T> struct BuilderFor_<T, Kind::ENUM> { typedef T Type; };
 template <typename T> struct BuilderFor_<T, Kind::INTERFACE> { typedef typename T::Client Type; };
 template <typename T> using BuilderFor = typename BuilderFor_<T>::Type;
 // The type returned by List<T>::Builder::operator[].
 
-template <typename T, Kind k = kind<T>()> struct PipelineFor_ { typedef typename T::Pipeline Type;};
+template <typename T, Kind k = CAPNP_KIND(T)> struct PipelineFor_ { typedef typename T::Pipeline Type; };
 template <typename T> struct PipelineFor_<T, Kind::INTERFACE> { typedef typename T::Client Type; };
 template <typename T> using PipelineFor = typename PipelineFor_<T>::Type;
 
-template <typename T, Kind k = kind<T>()> struct TypeIfEnum_;
+template <typename T, Kind k = CAPNP_KIND(T)> struct TypeIfEnum_;
 template <typename T> struct TypeIfEnum_<T, Kind::ENUM> { typedef T Type; };
 
 template <typename T>
 using TypeIfEnum = typename TypeIfEnum_<kj::Decay<T>>::Type;
 
 template <typename T>
-using FromReader = typename kj::Decay<T>::Reads;
+using FromReader = typename KJ_DECAY(T)::Reads;
 // FromReader<MyType::Reader> = MyType (for any Cap'n Proto type).
 
 template <typename T>
-using FromBuilder = typename kj::Decay<T>::Builds;
+using FromBuilder = typename KJ_DECAY(T)::Builds;
 // FromBuilder<MyType::Builder> = MyType (for any Cap'n Proto type).
 
 template <typename T>
-using FromClient = typename kj::Decay<T>::Calls;
+using FromClient = typename KJ_DECAY(T)::Calls;
 // FromReader<MyType::Client> = MyType (for any Cap'n Proto interface type).
 
 template <typename T>
-using FromServer = typename kj::Decay<T>::Serves;
+using FromServer = typename KJ_DECAY(T)::Serves;
 // FromBuilder<MyType::Server> = MyType (for any Cap'n Proto interface type).
 
 namespace _ {  // private
-template <typename T, Kind k = kind<T>()>
+template <typename T, Kind k = CAPNP_KIND(T)>
 struct PointerHelpers;
+#ifdef MSVC_HACKS
+template <typename T, Kind k>
+struct PointerHelpers {}; // to get round friend problem
+#endif
 }  // namespace _ (private)
 
 struct MessageSize {
@@ -299,23 +314,24 @@ typedef uint64_t WirePointerCount64;
 
 #endif
 
-constexpr BitCount BITS = kj::unit<BitCount>();
-constexpr ByteCount BYTES = kj::unit<ByteCount>();
-constexpr WordCount WORDS = kj::unit<WordCount>();
-constexpr ElementCount ELEMENTS = kj::unit<ElementCount>();
-constexpr WirePointerCount POINTERS = kj::unit<WirePointerCount>();
+KJ_CONSTEXPR(const) BitCount BITS = kj::unit<BitCount>();
+KJ_CONSTEXPR(const) ByteCount BYTES = kj::unit<ByteCount>();
+KJ_CONSTEXPR(const) WordCount WORDS = kj::unit<WordCount>();
+KJ_CONSTEXPR(const) ElementCount ELEMENTS = kj::unit<ElementCount>();
+KJ_CONSTEXPR(const) WirePointerCount POINTERS = kj::unit<WirePointerCount>();
 
 // GCC 4.7 actually gives unused warnings on these constants in opt mode...
-constexpr auto BITS_PER_BYTE KJ_UNUSED = 8 * BITS / BYTES;
-constexpr auto BITS_PER_WORD KJ_UNUSED = 64 * BITS / WORDS;
-constexpr auto BYTES_PER_WORD KJ_UNUSED = 8 * BYTES / WORDS;
+KJ_CONSTEXPR(const) auto BITS_PER_BYTE KJ_UNUSED = 8 * BITS / BYTES;
+KJ_CONSTEXPR(const) auto BITS_PER_WORD KJ_UNUSED = 64 * BITS / WORDS;
+KJ_CONSTEXPR(const) auto BYTES_PER_WORD KJ_UNUSED = 8 * BYTES / WORDS;
 
-constexpr auto BITS_PER_POINTER KJ_UNUSED = 64 * BITS / POINTERS;
-constexpr auto BYTES_PER_POINTER KJ_UNUSED = 8 * BYTES / POINTERS;
-constexpr auto WORDS_PER_POINTER KJ_UNUSED = 1 * WORDS / POINTERS;
+KJ_CONSTEXPR(const) auto BITS_PER_POINTER KJ_UNUSED = 64 * BITS / POINTERS;
+KJ_CONSTEXPR(const) auto BYTES_PER_POINTER KJ_UNUSED = 8 * BYTES / POINTERS;
+KJ_CONSTEXPR(const) auto WORDS_PER_POINTER KJ_UNUSED = 1 * WORDS / POINTERS;
 
-constexpr WordCount POINTER_SIZE_IN_WORDS = 1 * POINTERS * WORDS_PER_POINTER;
+KJ_CONSTEXPR(const) WordCount POINTER_SIZE_IN_WORDS = 1 * POINTERS * WORDS_PER_POINTER;
 
+#ifndef MSVC_HACKS
 template <typename T>
 inline constexpr decltype(BYTES / ELEMENTS) bytesPerElement() {
   return sizeof(T) * BYTES / ELEMENTS;
@@ -325,11 +341,12 @@ template <typename T>
 inline constexpr decltype(BITS / ELEMENTS) bitsPerElement() {
   return sizeof(T) * 8 * BITS / ELEMENTS;
 }
+#endif
 
-inline constexpr ByteCount intervalLength(const byte* a, const byte* b) {
+inline KJ_CONSTEXPR(const) ByteCount intervalLength(const byte* a, const byte* b) {
   return uint(b - a) * BYTES;
 }
-inline constexpr WordCount intervalLength(const word* a, const word* b) {
+inline KJ_CONSTEXPR(const) WordCount intervalLength(const word* a, const word* b) {
   return uint(b - a) * WORDS;
 }
 

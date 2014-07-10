@@ -154,7 +154,11 @@ InputStreamMessageReader::InputStreamMessageReader(
   }
 
   // Read sizes for all segments except the first.  Include padding if necessary.
+#if _MSC_VER
+  _::WireValue<uint32_t> *moreSizes = static_cast<_::WireValue<uint32_t> *>(_alloca((segmentCount & ~1) * sizeof(_::WireValue<uint32_t>)));
+#else
   _::WireValue<uint32_t> moreSizes[segmentCount & ~1];
+#endif
   if (segmentCount > 1) {
     inputStream.read(moreSizes, sizeof(moreSizes));
     for (uint i = 0; i < segmentCount - 1; i++) {
@@ -239,7 +243,11 @@ kj::ArrayPtr<const word> InputStreamMessageReader::getSegment(uint id) {
 void writeMessage(kj::OutputStream& output, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments) {
   KJ_REQUIRE(segments.size() > 0, "Tried to serialize uninitialized message.");
 
+#if _MSC_VER
+  _::WireValue<uint32_t> *table = static_cast<_::WireValue<uint32_t> *>(_alloca(((segments.size() + 2) & ~size_t(1)) * sizeof(_::WireValue<uint32_t>)));
+#else
   _::WireValue<uint32_t> table[(segments.size() + 2) & ~size_t(1)];
+#endif
 
   // We write the segment count - 1 because this makes the first word zero for single-segment
   // messages, improving compression.  We don't bother doing this with segment sizes because

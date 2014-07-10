@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// This file is included form all generated headers.
+// This file is included from all generated headers.
 
 #ifndef CAPNP_GENERATED_HEADER_SUPPORT_H_
 #define CAPNP_GENERATED_HEADER_SUPPORT_H_
@@ -31,12 +31,21 @@
 #include "any.h"
 #include <kj/string.h>
 #include <kj/string-tree.h>
+#if _MSC_VER
+#include <minwindef.h>
+#include <winnt.h>	// for MemoryBarrier()
+#include <minwinbase.h>
+#undef min
+#undef max
+#undef VOID		// defined in <winnt.h>
+#undef CONST
+#endif
 
 namespace capnp {
 
 class MessageBuilder;  // So that it can be declared a friend.
 
-template <typename T, Kind k = kind<T>()>
+template <typename T, Kind k = CAPNP_KIND(T)>
 struct ToDynamic_;   // Defined in dynamic.h, needs to be declared as everyone's friend.
 
 struct DynamicStruct;  // So that it can be declared a friend.
@@ -93,7 +102,12 @@ struct RawSchema {
     // is required in particular when traversing the dependency list.  RawSchemas for compiled-in
     // types are always initialized; only dynamically-loaded schemas may be lazy.
 
-    const Initializer* i = __atomic_load_n(&lazyInitializer, __ATOMIC_ACQUIRE);
+#if _MSC_VER
+	  MemoryBarrier();
+	  const Initializer* i = lazyInitializer;
+#else
+	  const Initializer* i = __atomic_load_n(&lazyInitializer, __ATOMIC_ACQUIRE);
+#endif
     if (i != nullptr) i->init(this);
   }
 };
@@ -241,7 +255,7 @@ inline constexpr uint sizeInWords() {
 #define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
     template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
     template <> struct StructSize_<type> { \
-      static constexpr StructSize value = StructSize( \
+      static KJ_CONSTEXPR(const) StructSize value = StructSize( \
           dataWordSize * WORDS, pointerCount * POINTERS, FieldSize::preferredElementEncoding); \
     }; \
     template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \

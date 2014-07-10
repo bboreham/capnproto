@@ -158,7 +158,7 @@ StringPtr Arena::copyString(StringPtr content) {
 
 void Arena::setDestructor(void* ptr, void (*destructor)(void*)) {
   ObjectHeader* header = reinterpret_cast<ObjectHeader*>(ptr) - 1;
-  KJ_DASSERT(reinterpret_cast<uintptr_t>(header) % alignof(ObjectHeader) == 0);
+  KJ_DASSERT(reinterpret_cast<uintptr_t>(header) % alignof(ObjectHeader) == 0, 0);	// hack to get past MSCV
   header->destructor = destructor;
   header->next = objectList;
   objectList = header;

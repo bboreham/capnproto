@@ -59,7 +59,7 @@ public:
   // TODO(someday):  flatten() when *this is an rvalue and when branches.size() == 0 could simply
   //   return `kj::mv(text)`.  Requires reference qualifiers (Clang 3.3 / GCC 4.8).
 
-  void flattenTo(char* __restrict__ target) const;
+  void flattenTo(char* KJ_RESTRICT target) const;
   // Copy the contents to the given character array.  Does not add a NUL terminator.
 
 private:
@@ -114,7 +114,7 @@ StringTree strTree(Params&&... params);
 namespace _ {  // private
 
 template <typename... Rest>
-char* fill(char* __restrict__ target, const StringTree& first, Rest&&... rest) {
+char* fill(char* KJ_RESTRICT target, const StringTree& first, Rest&&... rest) {
   // Make str() work with stringifiers that return StringTree by patching fill().
 
   first.flattenTo(target);

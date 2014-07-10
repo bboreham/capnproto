@@ -28,7 +28,13 @@
 #define KJ_USE_FUTEX 1
 #endif
 
-#if !KJ_USE_FUTEX
+#if _WIN32
+#include <minwindef.h>
+#include <minwinbase.h>
+#undef min
+#undef max
+#undef VOID		// defined in <winnt.h>
+#elif !KJ_USE_FUTEX
 // On Linux we use futex.  On other platforms we wrap pthreads.
 // TODO(someday):  Write efficient low-level locking primitives for other platforms.
 #include <pthread.h>
@@ -75,6 +81,8 @@ private:
   static constexpr uint EXCLUSIVE_REQUESTED = 1u << 30;
   static constexpr uint SHARED_COUNT_MASK = EXCLUSIVE_REQUESTED - 1;
 
+#elif _WIN32
+	mutable CRITICAL_SECTION critsec;
 #else
   mutable pthread_rwlock_t mutex;
 #endif
@@ -87,6 +95,8 @@ public:
 #if KJ_USE_FUTEX
   inline Once(bool startInitialized = false)
       : futex(startInitialized ? INITIALIZED : UNINITIALIZED) {}
+#elif _WIN32
+	// FIXME
 #else
   Once(bool startInitialized = false);
   ~Once();
@@ -104,6 +114,8 @@ public:
     // Fast path check to see if runOnce() would simply return immediately.
 #if KJ_USE_FUTEX
     return __atomic_load_n(&futex, __ATOMIC_ACQUIRE) == INITIALIZED;
+#elif _WIN32
+	  // FIXME
 #else
     return __atomic_load_n(&state, __ATOMIC_ACQUIRE) == INITIALIZED;
 #endif
@@ -123,6 +135,8 @@ public:
 
 #if KJ_USE_FUTEX
     return __atomic_load_n(&futex, __ATOMIC_ACQUIRE) == DISABLED;
+#elif _WIN32
+	  // FIXME
 #else
     return __atomic_load_n(&state, __ATOMIC_ACQUIRE) == DISABLED;
 #endif
@@ -140,6 +154,14 @@ private:
     DISABLED
   };
 
+#elif _WIN32
+	enum State {
+		UNINITIALIZED,
+		INITIALIZED,
+		DISABLED
+	};
+	State state;
+	CRITICAL_SECTION critsec;
 #else
   enum State {
     UNINITIALIZED,

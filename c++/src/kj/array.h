@@ -573,7 +573,7 @@ struct CopyConstructArray_;
 
 template <typename T>
 struct CopyConstructArray_<T, T*, true> {
-  static inline T* apply(T* __restrict__ pos, T* start, T* end) {
+  static inline T* apply(T* KJ_RESTRICT pos, T* start, T* end) {
     memcpy(pos, start, reinterpret_cast<byte*>(end) - reinterpret_cast<byte*>(start));
     return pos + (end - start);
   }
@@ -581,7 +581,7 @@ struct CopyConstructArray_<T, T*, true> {
 
 template <typename T>
 struct CopyConstructArray_<T, const T*, true> {
-  static inline T* apply(T* __restrict__ pos, const T* start, const T* end) {
+	static inline T* apply(T* KJ_RESTRICT pos, const T* start, const T* end) {
     memcpy(pos, start, reinterpret_cast<const byte*>(end) - reinterpret_cast<const byte*>(start));
     return pos + (end - start);
   }
@@ -589,7 +589,7 @@ struct CopyConstructArray_<T, const T*, true> {
 
 template <typename T, typename Iterator>
 struct CopyConstructArray_<T, Iterator, true> {
-  static inline T* apply(T* __restrict__ pos, Iterator start, Iterator end) {
+	static inline T* apply(T* KJ_RESTRICT pos, Iterator start, Iterator end) {
     // Since both the copy constructor and assignment operator are trivial, we know that assignment
     // is equivalent to copy-constructing.  So we can make this case somewhat easier for the
     // compiler to optimize.
@@ -613,7 +613,7 @@ struct CopyConstructArray_<T, Iterator, false> {
     }
   };
 
-  static T* apply(T* __restrict__ pos, Iterator start, Iterator end) {
+  static T* apply(T* KJ_RESTRICT pos, Iterator start, Iterator end) {
     if (noexcept(T(instance<const T&>()))) {
       while (start != end) {
         ctor(*pos++, implicitCast<const T&>(*start++));

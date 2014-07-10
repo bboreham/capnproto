@@ -23,7 +23,14 @@
 #include "string.h"
 #include "debug.h"
 #include "threadlocal.h"
+#if _WIN32
+#include <windef.h>
+#include <winbase.h>
+#undef min
+#undef max
+#else
 #include <unistd.h>
+#endif
 #include <stdlib.h>
 #include <exception>
 
@@ -310,7 +317,12 @@ public:
     StringPtr textPtr = text;
 
     while (text != nullptr) {
+#ifndef _WIN32
       ssize_t n = write(STDERR_FILENO, textPtr.begin(), textPtr.size());
+#else
+      DWORD n = 0;
+	  WriteFile(GetStdHandle(STD_ERROR_HANDLE), textPtr.begin(), textPtr.size(), &n, NULL);
+#endif
       if (n <= 0) {
         // stderr is broken.  Give up.
         return;
@@ -390,6 +402,19 @@ uint uncaughtExceptionCount() {
   return __cxa_get_globals()->uncaughtExceptions;
 }
 
+#elif  defined(_MSC_VER)
+// Here we use the same hack used by Evgeny Panasyuk:
+//   https://github.com/panaseleus/stack_unwinding/blob/master/boost/exception/uncaught_exception_count.hpp
+template<typename To> inline To *unrelated_pointer_cast(void *from) {
+    return static_cast<To*>(from);
+}
+extern "C" char * __cdecl _getptd();
+uint uncaughtExceptionCount() {
+	return *unrelated_pointer_cast<uint>
+		(
+		_getptd() + (sizeof(void*) == 8 ? 0x100 : 0x90)
+		);
+}
 #else
 #error "This needs to be ported to your compiler / C++ ABI."
 #endif

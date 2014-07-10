@@ -21,8 +21,15 @@
 
 #include "io.h"
 #include "debug.h"
+#if _WIN32
+#include <windef.h>
+#include <winbase.h>
+#undef min
+#undef max
+#else
 #include <unistd.h>
 #include <sys/uio.h>
+#endif
 #include <algorithm>
 #include <errno.h>
 #include <limits.h>
@@ -230,7 +237,7 @@ void ArrayOutputStream::write(const void* src, size_t size) {
 }
 
 // =======================================================================================
-
+#ifndef MSVC_HACKS
 AutoCloseFd::~AutoCloseFd() noexcept(false) {
   if (fd >= 0) {
     unwindDetector.catchExceptionsIfUnwinding([&]() {
@@ -325,5 +332,6 @@ void FdOutputStream::write(ArrayPtr<const ArrayPtr<const byte>> pieces) {
     }
   }
 }
+#endif
 
 }  // namespace kj

@@ -25,10 +25,19 @@
 #include <map>
 #include <set>
 #include <stdlib.h>
+#if _WIN32
+#include <windef.h>
+#include <winbase.h>
+#undef min
+#undef max
+#else
 #include <unistd.h>
+#endif
 #include <errno.h>
 #include <limits.h>
+#ifndef _WIN32
 #include <sys/uio.h>
+#endif
 
 namespace kj {
 
@@ -57,6 +66,7 @@ void TopLevelProcessContext::exit() {
   _exit(exitCode);
 }
 
+#ifndef _WIN32
 static void writeLineToFd(int fd, StringPtr message) {
   // Write the given message to the given file descriptor with a trailing newline iff the message
   // is non-empty and doesn't already have a trailing newline.  We use writev() to do this in a
@@ -110,6 +120,31 @@ static void writeLineToFd(int fd, StringPtr message) {
     }
   }
 }
+#else
+// Possibly need to revisit these for performance
+#define STDOUT_FILENO GetStdHandle(STD_OUTPUT_HANDLE)
+#define STDERR_FILENO GetStdHandle(STD_ERROR_HANDLE)
+
+static void writeLineToFd(HANDLE h, StringPtr message) {
+	// Write the given message to the given file descriptor with a trailing newline iff the message
+	// is non-empty and doesn't already have a trailing newline.  
+
+	if (message.size() == 0) {
+		return;
+	}
+
+	LPCVOID buf = const_cast<char*>(message.begin());
+	DWORD len = message.size();
+	DWORD bytes_written = 0;
+	if (!WriteFile(h, buf, len, &bytes_written, NULL))
+		// This function is meant for writing to stdout and stderr.  If writes fail on those FDs
+		// there's not a whole lot we can reasonably do, so just ignore it.
+		return;
+
+	if (!message.endsWith("\n"))
+		WriteFile(h, "\n", 1, &bytes_written, NULL);
+}
+#endif
 
 void TopLevelProcessContext::warning(StringPtr message) {
   writeLineToFd(STDERR_FILENO, message);
@@ -255,6 +290,7 @@ struct MainBuilder::Impl {
   }
 };
 
+#ifndef MSVC_HACKS
 MainBuilder::MainBuilder(ProcessContext& context, StringPtr version,
                          StringPtr briefDescription, StringPtr extendedDescription)
     : impl(heap<Impl>(context, version, briefDescription, extendedDescription)) {
@@ -263,6 +299,7 @@ MainBuilder::MainBuilder(ProcessContext& context, StringPtr version,
   addOption({"version"}, KJ_BIND_METHOD(*impl, printVersion),
             "Print version information and exit.");
 }
+#endif
 
 MainBuilder::~MainBuilder() noexcept(false) {}
 

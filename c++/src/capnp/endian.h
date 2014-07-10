@@ -39,6 +39,12 @@ namespace _ {  // private
 //   Cap'n Proto is special because it is essentially doing compiler-like things, fussing over
 //   allocation and layout of memory, in order to squeeze out every last drop of performance.
 
+#if WIN32
+// Windows always runs on little-endian machines.  Set these macros so we can use the same #ifdefs as for GCC
+#define __ORDER_LITTLE_ENDIAN__ 1
+#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#endif
+
 #if CAPNP_REVERSE_ENDIAN
 #define CAPNP_WIRE_BYTE_ORDER __ORDER_BIG_ENDIAN__
 #define CAPNP_OPPOSITE_OF_WIRE_BYTE_ORDER __ORDER_LITTLE_ENDIAN__

@@ -210,13 +210,13 @@ inline size_t sum(std::initializer_list<size_t> nums) {
 inline char* fill(char* ptr) { return ptr; }
 
 template <typename... Rest>
-char* fill(char* __restrict__ target, const StringTree& first, Rest&&... rest);
+char* fill(char* KJ_RESTRICT target, const StringTree& first, Rest&&... rest);
 // Make str() work with stringifiers that return StringTree by patching fill().
 //
 // Defined in string-tree.h.
 
 template <typename First, typename... Rest>
-char* fill(char* __restrict__ target, const First& first, Rest&&... rest) {
+char* fill(char* KJ_RESTRICT target, const First& first, Rest&&... rest) {
   auto i = first.begin();
   auto end = first.end();
   while (i != end) {
@@ -291,7 +291,7 @@ struct Stringifier {
   template <typename T>
   String operator*(const Array<T>& arr) const;
 };
-static constexpr Stringifier STR = Stringifier();
+static CONSTEXPR_CLASS_OBJECT Stringifier STR = Stringifier();
 
 }  // namespace _ (private)
 

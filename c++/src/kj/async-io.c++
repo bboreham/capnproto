@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 
 #include "async-io.h"
+#ifndef _WIN32
 #include "async-unix.h"
 #include "debug.h"
 #include "thread.h"
@@ -992,3 +993,4 @@ AsyncIoContext setupAsyncIo() {
 }
 
 }  // namespace kj
+#endif

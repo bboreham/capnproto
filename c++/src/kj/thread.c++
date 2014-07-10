@@ -21,6 +21,8 @@
 
 #include "thread.h"
 #include "debug.h"
+#if defined _WIN32
+#else
 #include <pthread.h>
 #include <signal.h>
 
@@ -76,3 +78,5 @@ void* Thread::runThread(void* ptr) {
 }
 
 }  // namespace kj
+#endif
+

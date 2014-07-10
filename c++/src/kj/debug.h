@@ -112,49 +112,63 @@
 
 namespace kj {
 
+// MSVC has a bug http://stackoverflow.com/questions/24506239/what-is-va-args-supposed-to-generate-when-there-are-no-arguments-passed
+// which we work round by concatenating a spurious ""
+
 #define KJ_LOG(severity, ...) \
   if (!::kj::_::Debug::shouldLog(::kj::_::Debug::Severity::severity)) {} else \
     ::kj::_::Debug::log(__FILE__, __LINE__, ::kj::_::Debug::Severity::severity, \
-                        #__VA_ARGS__, __VA_ARGS__)
+                        "" #__VA_ARGS__, __VA_ARGS__)
 
 #define KJ_DBG(...) KJ_LOG(DBG, ##__VA_ARGS__)
 
 #define _kJ_FAULT(nature, cond, ...) \
   if (KJ_LIKELY(cond)) {} else \
     for (::kj::_::Debug::Fault f(__FILE__, __LINE__, ::kj::Exception::Nature::nature, 0, \
-                                 #cond, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+                                 #cond, "" #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
 
 #define _kJ_FAIL_FAULT(nature, ...) \
   for (::kj::_::Debug::Fault f(__FILE__, __LINE__, ::kj::Exception::Nature::nature, 0, \
-                               nullptr, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+                               nullptr, "" #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
 
+#if defined(_MSC_VER)
+// MSVC has a bug - see https://connect.microsoft.com/VisualStudio/feedback/details/380090/variadic-macro-replacement
+// which we work round by adding an extra level of indirection macro expansion
+#define KJ_INDIRECT_EXPAND(macro, args) macro args
+#define KJ_ASSERT(...) KJ_INDIRECT_EXPAND(_kJ_FAULT, (LOCAL_BUG, __VA_ARGS__))
+#define KJ_REQUIRE(...) KJ_INDIRECT_EXPAND(_kJ_FAULT, (PRECONDITION, __VA_ARGS__))
+
+#define KJ_FAIL_ASSERT(...) KJ_INDIRECT_EXPAND(_kJ_FAIL_FAULT, (LOCAL_BUG, __VA_ARGS__))
+#define KJ_FAIL_REQUIRE(...) KJ_INDIRECT_EXPAND(_kJ_FAIL_FAULT, (PRECONDITION, __VA_ARGS__))
+#else
 #define KJ_ASSERT(...) _kJ_FAULT(LOCAL_BUG, ##__VA_ARGS__)
 #define KJ_REQUIRE(...) _kJ_FAULT(PRECONDITION, ##__VA_ARGS__)
 
 #define KJ_FAIL_ASSERT(...) _kJ_FAIL_FAULT(LOCAL_BUG, ##__VA_ARGS__)
 #define KJ_FAIL_REQUIRE(...) _kJ_FAIL_FAULT(PRECONDITION, ##__VA_ARGS__)
+#endif
 
 #define KJ_SYSCALL(call, ...) \
   if (auto _kjSyscallResult = ::kj::_::Debug::syscall([&](){return (call);}, false)) {} else \
     for (::kj::_::Debug::Fault f( \
              __FILE__, __LINE__, ::kj::Exception::Nature::OS_ERROR, \
-             _kjSyscallResult.getErrorNumber(), #call, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+             _kjSyscallResult.getErrorNumber(), #call, "" #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
 
 #define KJ_NONBLOCKING_SYSCALL(call, ...) \
   if (auto _kjSyscallResult = ::kj::_::Debug::syscall([&](){return (call);}, true)) {} else \
     for (::kj::_::Debug::Fault f( \
              __FILE__, __LINE__, ::kj::Exception::Nature::OS_ERROR, \
-             _kjSyscallResult.getErrorNumber(), #call, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+             _kjSyscallResult.getErrorNumber(), #call, "" #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
 
 #define KJ_FAIL_SYSCALL(code, errorNumber, ...) \
   for (::kj::_::Debug::Fault f( \
            __FILE__, __LINE__, ::kj::Exception::Nature::OS_ERROR, \
-           errorNumber, code, #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
+           errorNumber, code, "" #__VA_ARGS__, ##__VA_ARGS__);; f.fatal())
 
 #define KJ_CONTEXT(...) \
   auto KJ_UNIQUE_NAME(_kjContextFunc) = [&]() -> ::kj::_::Debug::Context::Value { \
         return ::kj::_::Debug::Context::Value(__FILE__, __LINE__, \
-            ::kj::_::Debug::makeContextDescription(#__VA_ARGS__, ##__VA_ARGS__)); \
+            ::kj::_::Debug::makeContextDescription("" #__VA_ARGS__, ##__VA_ARGS__)); \
       }; \
   ::kj::_::Debug::ContextImpl<decltype(KJ_UNIQUE_NAME(_kjContextFunc))> \
       KJ_UNIQUE_NAME(_kjContext)(KJ_UNIQUE_NAME(_kjContextFunc))
@@ -164,7 +178,7 @@ namespace kj {
     auto _kj_result = ::kj::_::readMaybe(value); \
     if (KJ_UNLIKELY(!_kj_result)) { \
       ::kj::_::Debug::Fault(__FILE__, __LINE__, ::kj::Exception::Nature::nature, 0, \
-                            #value " != nullptr", #__VA_ARGS__, ##__VA_ARGS__).fatal(); \
+                            #value " != nullptr", "" #__VA_ARGS__, ##__VA_ARGS__).fatal(); \
     } \
     _kj_result; \
   }))
@@ -301,7 +315,7 @@ ArrayPtr<const char> KJ_STRINGIFY(Debug::Severity severity);
 template <typename... Params>
 void Debug::log(const char* file, int line, Severity severity, const char* macroArgs,
                 Params&&... params) {
-  String argValues[sizeof...(Params)] = {str(params)...};
+  String argValues[sizeof...(Params) > 0 ? sizeof...(Params) : 1] = { str(params)... };
   logInternal(file, line, severity, macroArgs, arrayPtr(argValues, sizeof...(Params)));
 }
 
@@ -309,7 +323,7 @@ template <typename... Params>
 Debug::Fault::Fault(const char* file, int line, Exception::Nature nature, int errorNumber,
                     const char* condition, const char* macroArgs, Params&&... params)
     : exception(nullptr) {
-  String argValues[sizeof...(Params)] = {str(params)...};
+  String argValues[sizeof...(Params) > 0 ? sizeof...(Params) : 1] = { str(params)... };
   init(file, line, nature, errorNumber, condition, macroArgs,
        arrayPtr(argValues, sizeof...(Params)));
 }
@@ -330,7 +344,7 @@ Debug::SyscallResult Debug::syscall(Call&& call, bool nonblocking) {
 
 template <typename... Params>
 String Debug::makeContextDescription(const char* macroArgs, Params&&... params) {
-  String argValues[sizeof...(Params)] = {str(params)...};
+  String argValues[sizeof...(Params) > 0 ? sizeof...(Params) : 1] = {str(params)...};
   return makeContextDescriptionInternal(macroArgs, arrayPtr(argValues, sizeof...(Params)));
 }
 

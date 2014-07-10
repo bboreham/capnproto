@@ -118,8 +118,12 @@ private:
 
 #else
 
+#if _MSC_VER
+#define KJ_THREADLOCAL_PTR(type) static __declspec(thread) type*
+#else
 #define KJ_THREADLOCAL_PTR(type) static __thread type*
 // For
+#endif
 
 #endif // KJ_USE_PTHREAD_TLS
 

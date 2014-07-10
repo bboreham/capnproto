@@ -127,6 +127,12 @@ static String makeDescription(DescriptionStyle style, const char* code, int erro
     if (style == SYSCALL) {
       sysErrorArray = strerror_r(errorNumber, buffer, sizeof(buffer));
     }
+#elif _WIN32
+	char buffer[256];
+	if (style == SYSCALL) {
+		strerror_s(buffer, sizeof(buffer), errorNumber);
+		sysErrorArray = buffer;
+	}
 #else
     char buffer[256];
     if (style == SYSCALL) {

@@ -125,6 +125,7 @@ enum class FieldSize: uint8_t {
 typedef decltype(BITS / ELEMENTS) BitsPerElement;
 typedef decltype(POINTERS / ELEMENTS) PointersPerElement;
 
+#ifndef MSVC_HACKS  // too many errors - come back to this @@FIXME
 static constexpr BitsPerElement BITS_PER_ELEMENT_TABLE[8] = {
     0 * BITS / ELEMENTS,
     1 * BITS / ELEMENTS,
@@ -139,6 +140,7 @@ static constexpr BitsPerElement BITS_PER_ELEMENT_TABLE[8] = {
 inline constexpr BitsPerElement dataBitsPerElement(FieldSize size) {
   return _::BITS_PER_ELEMENT_TABLE[static_cast<int>(size)];
 }
+#endif
 
 inline constexpr PointersPerElement pointersPerElement(FieldSize size) {
   return size == FieldSize::POINTER ? 1 * POINTERS / ELEMENTS : 0 * POINTERS / ELEMENTS;
@@ -235,7 +237,7 @@ inline constexpr StructSize structSize() {
 // -------------------------------------------------------------------
 // Masking of default values
 
-template <typename T, Kind kind = kind<T>()> struct Mask_;
+template <typename T, Kind kind = CAPNP_KIND(T)> struct Mask_;
 template <typename T> struct Mask_<T, Kind::PRIMITIVE> { typedef T Type; };
 template <typename T> struct Mask_<T, Kind::ENUM> { typedef uint16_t Type; };
 template <> struct Mask_<float, Kind::PRIMITIVE> { typedef uint32_t Type; };

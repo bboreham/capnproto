@@ -312,11 +312,11 @@ private:
   friend class EventLoop;
 };
 
-constexpr _::Void READY_NOW = _::Void();
+CONSTEXPR_CLASS_OBJECT _::Void READY_NOW = _::Void();
 // Use this when you need a Promise<void> that is already fulfilled -- this value can be implicitly
 // cast to `Promise<void>`.
 
-constexpr _::NeverDone NEVER_DONE = _::NeverDone();
+CONSTEXPR_CLASS_OBJECT _::NeverDone NEVER_DONE = _::NeverDone();
 // The opposite of `READY_NOW`, return this when the promise should never resolve.  This can be
 // implicitly converted to any promise type.  You may also call `NEVER_DONE.wait()` to wait
 // forever (useful for servers).

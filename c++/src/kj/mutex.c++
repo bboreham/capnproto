@@ -230,6 +230,8 @@ void Once::disable() noexcept {
   }
 }
 
+#elif _WIN32
+// FIXME
 #else
 // =======================================================================================
 // Generic pthreads-based implementation
