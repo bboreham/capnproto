@@ -19,40 +19,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "io.h"
-#include "debug.h"
-#include <gtest/gtest.h>
-#include "platform.h"
+#ifndef KJ_PLATFORM_H_
+#define KJ_PLATFORM_H_
 
-namespace kj {
-namespace {
+// A file to bring in OS-level definitions, such as found in <unistd.h>, isolating changes required to port to other platforms
 
-TEST(Io, WriteVec) {
-  // Check that writing an array of arrays works even when some of the arrays are empty.  (This
-  // used to not work in some cases.)
+#if _WIN32
+#include <windef.h>
+#include <winbase.h>
+#undef min
+#undef max
+#undef VOID
+#else
+#include <unistd.h>
+#include <sys/uio.h>
+#endif
 
-  int fds[2];
-  KJ_SYSCALL(pipe(fds));
 
-  FdInputStream in((AutoCloseFd(fds[0])));
-  FdOutputStream out((AutoCloseFd(fds[1])));
-
-  ArrayPtr<const byte> pieces[5] = {
-    arrayPtr(implicitCast<const byte*>(nullptr), 0),
-    arrayPtr(reinterpret_cast<const byte*>("foo"), 3),
-    arrayPtr(implicitCast<const byte*>(nullptr), 0),
-    arrayPtr(reinterpret_cast<const byte*>("bar"), 3),
-    arrayPtr(implicitCast<const byte*>(nullptr), 0)
-  };
-
-  out.write(pieces);
-
-  char buf[7];
-  in.read(buf, 6);
-  buf[6] = '\0';
-
-  EXPECT_STREQ("foobar", buf);
-}
-
-}  // namespace
-}  // namespace kj
+#endif

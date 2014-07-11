@@ -23,14 +23,7 @@
 #include "string.h"
 #include "debug.h"
 #include "threadlocal.h"
-#if _WIN32
-#include <windef.h>
-#include <winbase.h>
-#undef min
-#undef max
-#else
-#include <unistd.h>
-#endif
+#include "platform.h"
 #include <stdlib.h>
 #include <exception>
 

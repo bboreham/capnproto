@@ -28,7 +28,7 @@
 #include <capnp/schema.capnp.h>
 #include <kj/vector.h>
 #include <kj/io.h>
-#include <unistd.h>
+#include <kj/platform.h>
 #include <kj/debug.h>
 #include "../message.h"
 #include <iostream>

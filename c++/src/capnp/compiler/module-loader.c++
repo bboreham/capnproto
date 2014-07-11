@@ -28,7 +28,7 @@
 #include <kj/io.h>
 #include <capnp/message.h>
 #include <map>
-#include <unistd.h>
+#include <kj/platform.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>

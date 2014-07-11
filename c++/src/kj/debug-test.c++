@@ -24,13 +24,15 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <stdio.h>
-#include <unistd.h>
+#include "platform.h"
 #include <signal.h>
 #include <errno.h>
 #include <string.h>
 #include <exception>
 #include <sys/types.h>
+#ifndef WIN32
 #include <sys/wait.h>
+#endif
 
 namespace kj {
 namespace _ {  // private

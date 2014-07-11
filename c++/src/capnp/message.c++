@@ -28,7 +28,7 @@
 #include <exception>
 #include <string>
 #include <vector>
-#include <unistd.h>
+#include <kj/platform.h>
 #include <errno.h>
 
 namespace capnp {

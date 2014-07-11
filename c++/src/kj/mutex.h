@@ -29,11 +29,7 @@
 #endif
 
 #if _WIN32
-#include <minwindef.h>
-#include <minwinbase.h>
-#undef min
-#undef max
-#undef VOID		// defined in <winnt.h>
+#include "platform.h"
 #elif !KJ_USE_FUTEX
 // On Linux we use futex.  On other platforms we wrap pthreads.
 // TODO(someday):  Write efficient low-level locking primitives for other platforms.

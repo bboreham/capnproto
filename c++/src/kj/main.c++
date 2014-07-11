@@ -25,19 +25,9 @@
 #include <map>
 #include <set>
 #include <stdlib.h>
-#if _WIN32
-#include <windef.h>
-#include <winbase.h>
-#undef min
-#undef max
-#else
-#include <unistd.h>
-#endif
+#include "platform.h"
 #include <errno.h>
 #include <limits.h>
-#ifndef _WIN32
-#include <sys/uio.h>
-#endif
 
 namespace kj {
 

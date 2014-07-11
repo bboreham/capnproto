@@ -23,7 +23,7 @@
 #include "debug.h"
 #include "thread.h"
 #include <pthread.h>
-#include <unistd.h>
+#include "platform.h"
 #include <gtest/gtest.h>
 
 namespace kj {

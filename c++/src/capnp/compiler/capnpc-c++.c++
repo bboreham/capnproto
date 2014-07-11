@@ -29,7 +29,7 @@
 #include <kj/vector.h>
 #include "../schema-loader.h"
 #include "../dynamic.h"
-#include <unistd.h>
+#include <kj/platform.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <set>

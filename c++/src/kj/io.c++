@@ -21,15 +21,7 @@
 
 #include "io.h"
 #include "debug.h"
-#if _WIN32
-#include <windef.h>
-#include <winbase.h>
-#undef min
-#undef max
-#else
-#include <unistd.h>
-#include <sys/uio.h>
-#endif
+#include "platform.h"
 #include <algorithm>
 #include <errno.h>
 #include <limits.h>

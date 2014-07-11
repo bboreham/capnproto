@@ -23,14 +23,7 @@
 #include "md5.h"
 #include <capnp/dynamic.h>
 #include <kj/debug.h>
-#if _WIN32
-#include <windef.h>
-#include <winbase.h>
-#undef min
-#undef max
-#else
-#include <unistd.h>
-#endif
+#include <kj/platform.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
