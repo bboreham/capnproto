@@ -174,14 +174,14 @@ namespace kj {
       KJ_UNIQUE_NAME(_kjContext)(KJ_UNIQUE_NAME(_kjContextFunc))
 
 #define _kJ_NONNULL(nature, value, ...) \
-  (*({ \
+  (*[&] () { \
     auto _kj_result = ::kj::_::readMaybe(value); \
     if (KJ_UNLIKELY(!_kj_result)) { \
       ::kj::_::Debug::Fault(__FILE__, __LINE__, ::kj::Exception::Nature::nature, 0, \
                             #value " != nullptr", "" #__VA_ARGS__, ##__VA_ARGS__).fatal(); \
     } \
-    _kj_result; \
-  }))
+    return _kj_result; \
+  } ())
 #define KJ_ASSERT_NONNULL(value, ...) _kJ_NONNULL(LOCAL_BUG, value, ##__VA_ARGS__)
 #define KJ_REQUIRE_NONNULL(value, ...) _kJ_NONNULL(PRECONDITION, value, ##__VA_ARGS__)
 
