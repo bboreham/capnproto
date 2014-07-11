@@ -104,32 +104,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\c++\src\capnp\any-test.c++" />
-    <None Include="..\..\c++\src\capnp\blob-test.c++" />
-    <None Include="..\..\c++\src\capnp\capability-test.c++" />
-    <None Include="..\..\c++\src\capnp\common-test.c++" />
-    <None Include="..\..\c++\src\capnp\dynamic-test.c++" />
-    <None Include="..\..\c++\src\capnp\encoding-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-fallback-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-reverse-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-test.c++" />
-    <None Include="..\..\c++\src\capnp\ez-rpc-test.c++" />
-    <None Include="..\..\c++\src\capnp\layout-test.c++" />
-    <None Include="..\..\c++\src\capnp\message-test.c++" />
-    <None Include="..\..\c++\src\capnp\orphan-test.c++" />
-    <None Include="..\..\c++\src\capnp\rpc-test.c++" />
-    <None Include="..\..\c++\src\capnp\rpc-twoparty-test.c++" />
-    <None Include="..\..\c++\src\capnp\schema.capnp.c++" />
-    <None Include="..\..\c++\src\capnp\schema-loader-test.c++" />
-    <None Include="..\..\c++\src\capnp\schema-parser-test.c++" />
-    <None Include="..\..\c++\src\capnp\schema-test.c++" />
-    <None Include="..\..\c++\src\capnp\serialize-async-test.c++" />
-    <None Include="..\..\c++\src\capnp\serialize-packed-test.c++" />
-    <None Include="..\..\c++\src\capnp\stringify-test.c++" />
-    <None Include="..\..\c++\src\capnp\test-util.c++" />
-    <None Include="..\..\c++\src\capnp\serialize-test.c++" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="..\..\c++\src\capnp\any.c++">
       <Filter>Source Files</Filter>
     </ClCompile>

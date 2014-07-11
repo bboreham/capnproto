@@ -21,9 +21,6 @@
     <ClCompile Include="..\..\c++\src\kj\array-test.c++">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\async-io-test.c++">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\c++\src\kj\common-test.c++">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,20 +63,16 @@
     <ClCompile Include="..\..\c++\src\kj\units-test.c++">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\async-test.c++">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\c++\src\capnp\compiler\lexer-test.c++">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\c++\src\capnp\compiler\md5-test.c++">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\c++\src\capnp\compiler\evolution-test.c++">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\c++\src\kj\io-test.c++">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\c++\src\kj\async-io-test.c++">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="..\..\c++\src\kj\async-test.c++">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

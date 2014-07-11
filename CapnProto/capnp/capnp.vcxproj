@@ -104,54 +104,39 @@
     <ClInclude Include="..\..\c++\src\capnp\test-util.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\c++\src\capnp\any-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\any.c++">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="..\..\c++\src\capnp\arena.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\blob-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\blob.c++">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="..\..\c++\src\capnp\c++.capnp.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\capability-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\capability.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\common-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\dynamic-capability.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\dynamic-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\dynamic.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\encoding-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-fallback-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-reverse-test.c++" />
-    <None Include="..\..\c++\src\capnp\endian-test.c++" />
-    <None Include="..\..\c++\src\capnp\ez-rpc-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\ez-rpc.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\layout-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\layout.c++">
       <FileType>Document</FileType>
     </ClCompile>
     <ClCompile Include="..\..\c++\src\capnp\list.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\message-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\message.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\orphan-test.c++" />
-    <None Include="..\..\c++\src\capnp\rpc-test.c++" />
-    <None Include="..\..\c++\src\capnp\rpc-twoparty-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\rpc-twoparty.c++">
       <FileType>Document</FileType>
     </ClCompile>
@@ -164,36 +149,27 @@
     <ClCompile Include="..\..\c++\src\capnp\rpc.capnp.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\schema-loader-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\schema-loader.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\schema-parser-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\schema-parser.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\schema-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\schema.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\schema.capnp.c++" />
-    <None Include="..\..\c++\src\capnp\serialize-async-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\serialize-async.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\serialize-packed-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\serialize-packed.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\serialize-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\serialize.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\stringify-test.c++" />
     <ClCompile Include="..\..\c++\src\capnp\stringify.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <None Include="..\..\c++\src\capnp\test-util.c++" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

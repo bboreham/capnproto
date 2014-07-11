@@ -11,19 +11,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9B36AFA9-3458-4EBF-8BAD-4C0FC761158C}</ProjectGuid>
+    <ProjectGuid>{D3FB5F85-F00E-4F1F-9BD1-5E43D564317E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>kj</RootNamespace>
+    <RootNamespace>tests</RootNamespace>
+    <ProjectName>kj-tests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -39,114 +40,136 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\work\gtest\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\work\gtest\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\c++\src\kj\arena.h" />
-    <ClInclude Include="..\..\c++\src\kj\array.h" />
-    <ClInclude Include="..\..\c++\src\kj\async-inl.h" />
-    <ClInclude Include="..\..\c++\src\kj\async-io.h" />
-    <ClInclude Include="..\..\c++\src\kj\async-prelude.h" />
-    <ClInclude Include="..\..\c++\src\kj\async.h" />
-    <ClInclude Include="..\..\c++\src\kj\common.h" />
-    <ClInclude Include="..\..\c++\src\kj\debug.h" />
-    <ClInclude Include="..\..\c++\src\kj\exception.h" />
-    <ClInclude Include="..\..\c++\src\kj\function.h" />
-    <ClInclude Include="..\..\c++\src\kj\io.h" />
-    <ClInclude Include="..\..\c++\src\kj\main.h" />
-    <ClInclude Include="..\..\c++\src\kj\memory.h" />
-    <ClInclude Include="..\..\c++\src\kj\mutex.h" />
-    <ClInclude Include="..\..\c++\src\kj\one-of.h" />
-    <ClInclude Include="..\..\c++\src\kj\platform.h" />
-    <ClInclude Include="..\..\c++\src\kj\refcount.h" />
-    <ClInclude Include="..\..\c++\src\kj\string-tree.h" />
-    <ClInclude Include="..\..\c++\src\kj\string.h" />
-    <ClInclude Include="..\..\c++\src\kj\thread.h" />
-    <ClInclude Include="..\..\c++\src\kj\threadlocal.h" />
-    <ClInclude Include="..\..\c++\src\kj\time.h" />
-    <ClInclude Include="..\..\c++\src\kj\tuple.h" />
-    <ClInclude Include="..\..\c++\src\kj\units.h" />
-    <ClInclude Include="..\..\c++\src\kj\vector.h" />
+    <ClCompile Include="..\..\c++\src\kj\arena-test.c++">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\c++\src\kj\arena.c++">
-      <FileType>Document</FileType>
-      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
-    </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\array.c++">
+    <ClCompile Include="..\..\c++\src\kj\array-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\async-io.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\common-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\async.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\debug-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\common.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\exception-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\debug.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\function-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\exception.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\memory-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\io.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\mutex-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\main.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\one-of-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\memory.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\refcount-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\mutex.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\string-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\refcount.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\string-tree-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\string-tree.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\threadlocal-pthread-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\string.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\threadlocal-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\thread.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\tuple-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
-    <ClCompile Include="..\..\c++\src\kj\units.c++">
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\units-test.c++">
       <FileType>Document</FileType>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\c++\src\kj\async-test.c++">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\c++\src\kj\io-test.c++">
+      <FileType>Document</FileType>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\c++\src\kj\async-io-test.c++" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

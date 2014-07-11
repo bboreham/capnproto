@@ -87,6 +87,9 @@
     <ClInclude Include="..\..\c++\src\kj\vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\c++\src\kj\platform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\c++\src\kj\arena.c++">
