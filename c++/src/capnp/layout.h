@@ -781,8 +781,10 @@ public:
   void truncate(ElementCount size, bool isText);
 
 private:
+#ifndef MSVC_HACKS
   static_assert(1 * POINTERS * WORDS_PER_POINTER == 1 * WORDS,
                 "This struct assumes a pointer is one word.");
+#endif
   word tag;
   // Contains an encoded WirePointer representing this object.  WirePointer is defined in
   // layout.c++, but fits in a word.
