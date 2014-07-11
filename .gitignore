@@ -36,3 +36,15 @@
 
 # cabal-install artifacts
 /compiler/dist/
+
+# Visual Studio
+
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
+*.sdf
+*.opensdf
+
+# Build results
+[Dd]ebug/
