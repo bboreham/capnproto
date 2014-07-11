@@ -420,6 +420,7 @@ constexpr bool canMemcpy() {
 // when first encountered.
 
 #if defined(MSVC_HACKS)
+// MSVC having a lot of trouble with constexpr
 template<typename T> T&& mv(T& t) noexcept { return static_cast<T&&>(t); }
 template<typename T> T&& fwd(NoInfer<T>& t) noexcept { return static_cast<T&&>(t); }
 
