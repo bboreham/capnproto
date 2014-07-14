@@ -30,6 +30,7 @@
 #undef min
 #undef max
 #undef VOID
+#undef CONST
 #else
 #include <unistd.h>
 #include <sys/uio.h>
