@@ -395,17 +395,17 @@ uint uncaughtExceptionCount() {
   return __cxa_get_globals()->uncaughtExceptions;
 }
 
-#elif  defined(_MSC_VER)
-// Here we use the same hack used by Evgeny Panasyuk:
-//   https://github.com/panaseleus/stack_unwinding/blob/master/boost/exception/uncaught_exception_count.hpp
+#elif _MSC_VER >= 1900
+// Here we use a variant of the hack used by Evgeny Panasyuk, updated for MSVC 14 
+// (deduced by inspection of C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/crt/src/vcruntime/vcruntime_internal.h):
 template<typename To> inline To *unrelated_pointer_cast(void *from) {
     return static_cast<To*>(from);
 }
-extern "C" char * __cdecl _getptd();
+extern "C" char * __cdecl __vcrt_getptd();
 uint uncaughtExceptionCount() {
 	return *unrelated_pointer_cast<uint>
 		(
-		_getptd() + (sizeof(void*) == 8 ? 0x100 : 0x90)
+		__vcrt_getptd() + (sizeof(void*) == 8 ? 0x38 : 0x1C)
 		);
 }
 #else
