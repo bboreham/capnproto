@@ -22,6 +22,9 @@
 #include "dynamic.h"
 #include <kj/debug.h>
 #include <kj/vector.h>
+#if _MSC_VER
+#include <malloc.h>		// for _alloca()
+#endif
 
 namespace capnp {
 
@@ -58,7 +61,11 @@ public:
     if (amount == 0 || canPrintAllInline(items, kind)) {
       return kj::StringTree(kj::mv(items), ", ");
     } else {
+#if _MSC_VER
+		char *delim = static_cast<char*>(_alloca(amount * 2 + 3));
+#else
       char delim[amount * 2 + 3];
+#endif
       delim[0] = ',';
       delim[1] = '\n';
       memset(delim + 2, ' ', amount * 2);
@@ -181,10 +188,19 @@ static kj::StringTree print(const DynamicValue::Reader& value,
     }
     case DynamicValue::LIST: {
       auto listValue = value.as<DynamicList>();
-      auto which = listValue.getSchema().whichElementType();
+	  auto which = listValue.getSchema().whichElementType();
+#ifdef MSVC_HACKS
+	  // Open-code what KJ_MAP does because MSVC can't instantiate the template
+	  auto builder = kj::heapArrayBuilder<kj::StringTree>(listValue.size());
+	  for (auto iter = listValue.begin(); iter != listValue.end(); ++iter) {
+		  builder.add(print(*iter, which, indent.next(), BARE));
+	  }
+	  kj::Array<kj::StringTree> elements = builder.finish();
+#else
       kj::Array<kj::StringTree> elements = KJ_MAP(element, listValue) {
         return print(element, which, indent.next(), BARE);
       };
+#endif
       return kj::strTree('[', indent.delimit(kj::mv(elements), mode, PrintKind::LIST), ']');
     }
     case DynamicValue::ENUM: {
