@@ -33,7 +33,7 @@ class InterfaceSchema;
 class ConstSchema;
 class ListSchema;
 
-template <typename T, Kind k = kind<T>()> struct SchemaType_ { typedef Schema Type; };
+template <typename T, Kind k = CAPNP_KIND(T)> struct SchemaType_ { typedef Schema Type; };
 template <typename T> struct SchemaType_<T, Kind::PRIMITIVE> { typedef schema::Type::Which Type; };
 template <typename T> struct SchemaType_<T, Kind::BLOB> { typedef schema::Type::Which Type; };
 template <typename T> struct SchemaType_<T, Kind::ENUM> { typedef EnumSchema Type; };
