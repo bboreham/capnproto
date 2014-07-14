@@ -32,13 +32,8 @@
 #include <kj/string.h>
 #include <kj/string-tree.h>
 #if _MSC_VER
-#include <minwindef.h>
+#include <kj/platform.h>
 #include <winnt.h>	// for MemoryBarrier()
-#include <minwinbase.h>
-#undef min
-#undef max
-#undef VOID		// defined in <winnt.h>
-#undef CONST
 #endif
 
 namespace capnp {
@@ -252,6 +247,23 @@ inline constexpr uint sizeInWords() {
     constexpr Kind Kind_<type>::kind; \
     constexpr uint64_t TypeId_<type>::typeId
 
+#if _MSC_VER
+// MSVC enforces the rule that a static data member with an in-class initializer must have non-volatile const integral type (and StructSize is not an integral type)
+#define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
+    template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
+    template <> struct StructSize_<type> { \
+      static KJ_CONSTEXPR(const) StructSize value; \
+    }; \
+    template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
+    template <> struct RawSchema_<type> { \
+      static inline const RawSchema& get() { return schemas::s_##id; } \
+    }
+#define CAPNP_DEFINE_STRUCT(type) \
+    constexpr Kind Kind_<type>::kind; \
+    constexpr StructSize StructSize_<type>::value = StructSize( \
+          dataWordSize * WORDS, pointerCount * POINTERS, FieldSize::preferredElementEncoding); \
+    constexpr uint64_t TypeId_<type>::typeId
+#else
 #define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
     template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
     template <> struct StructSize_<type> { \
@@ -266,6 +278,7 @@ inline constexpr uint sizeInWords() {
     constexpr Kind Kind_<type>::kind; \
     constexpr StructSize StructSize_<type>::value; \
     constexpr uint64_t TypeId_<type>::typeId
+#endif
 
 #define CAPNP_DECLARE_UNION(type, parentType, memberIndex) \
     template <> struct Kind_<type> { static constexpr Kind kind = Kind::UNION; }; \

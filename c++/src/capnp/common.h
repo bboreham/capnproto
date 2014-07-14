@@ -331,17 +331,15 @@ KJ_CONSTEXPR(const) auto WORDS_PER_POINTER KJ_UNUSED = 1 * WORDS / POINTERS;
 
 KJ_CONSTEXPR(const) WordCount POINTER_SIZE_IN_WORDS = 1 * POINTERS * WORDS_PER_POINTER;
 
-#ifndef MSVC_HACKS
 template <typename T>
-inline constexpr decltype(BYTES / ELEMENTS) bytesPerElement() {
+inline KJ_CONSTEXPR(const) decltype(BYTES / ELEMENTS) bytesPerElement() {
   return sizeof(T) * BYTES / ELEMENTS;
 }
 
 template <typename T>
-inline constexpr decltype(BITS / ELEMENTS) bitsPerElement() {
+inline KJ_CONSTEXPR(const) decltype(BITS / ELEMENTS) bitsPerElement() {
   return sizeof(T) * 8 * BITS / ELEMENTS;
 }
-#endif
 
 inline KJ_CONSTEXPR(const) ByteCount intervalLength(const byte* a, const byte* b) {
   return uint(b - a) * BYTES;
