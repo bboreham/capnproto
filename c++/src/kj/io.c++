@@ -229,13 +229,20 @@ void ArrayOutputStream::write(const void* src, size_t size) {
 }
 
 // =======================================================================================
-#ifndef MSVC_HACKS
 AutoCloseFd::~AutoCloseFd() noexcept(false) {
+#ifndef WIN32
   if (fd >= 0) {
+#else
+  if (fd != reinterpret_cast<fdtype>(-1)) {
+#endif
     unwindDetector.catchExceptionsIfUnwinding([&]() {
       // Don't use SYSCALL() here because close() should not be repeated on EINTR.
+#ifndef WIN32
       if (close(fd) < 0) {
-        KJ_FAIL_SYSCALL("close", errno, fd) {
+#else
+      if (CloseHandle(fd) == 0) {
+#endif
+      KJ_FAIL_SYSCALL("close", errno, fd) {
           break;
         }
       }
@@ -251,8 +258,13 @@ size_t FdInputStream::tryRead(void* buffer, size_t minBytes, size_t maxBytes) {
   byte* max = pos + maxBytes;
 
   while (pos < min) {
+#ifndef WIN32
     ssize_t n;
     KJ_SYSCALL(n = ::read(fd, pos, max - pos), fd);
+#else
+    DWORD n;
+    KJ_SYSCALL(ReadFile(fd, pos, max - pos, &n, nullptr));
+#endif
     if (n == 0) {
       break;
     }
@@ -268,8 +280,13 @@ void FdOutputStream::write(const void* buffer, size_t size) {
   const char* pos = reinterpret_cast<const char*>(buffer);
 
   while (size > 0) {
+#ifndef WIN32
     ssize_t n;
     KJ_SYSCALL(n = ::write(fd, pos, size), fd);
+#else
+    DWORD n;
+    KJ_SYSCALL(WriteFile(fd, pos, size, &n, nullptr));
+#endif
     KJ_ASSERT(n > 0, "write() returned zero.");
     pos += n;
     size -= n;
@@ -277,6 +294,7 @@ void FdOutputStream::write(const void* buffer, size_t size) {
 }
 
 void FdOutputStream::write(ArrayPtr<const ArrayPtr<const byte>> pieces) {
+#ifndef WIN32
   // Apparently, there is a maximum number of iovecs allowed per call.  I don't understand why.
   // Also, most platforms define IOV_MAX but Linux defines only UIO_MAXIOV.  Unfortunately, Solaris
   // defines a constant UIO_MAXIOV with a different meaning, so we check for IOV_MAX first.
@@ -323,7 +341,12 @@ void FdOutputStream::write(ArrayPtr<const ArrayPtr<const byte>> pieces) {
       current->iov_len -= n;
     }
   }
-}
+#else
+  // Let's get this working on Windows in a boring way before getting into scatter/gather IO
+  for (uint i = 0; i < pieces.size(); i++) {
+    this->write(pieces[i].begin(), pieces[i].size());
+  }
 #endif
+}
 
 }  // namespace kj

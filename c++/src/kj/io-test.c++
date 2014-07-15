@@ -31,8 +31,13 @@ TEST(Io, WriteVec) {
   // Check that writing an array of arrays works even when some of the arrays are empty.  (This
   // used to not work in some cases.)
 
+#ifndef WIN32
   int fds[2];
   KJ_SYSCALL(pipe(fds));
+#else
+  HANDLE fds[2];
+  KJ_SYSCALL(CreatePipe(&fds[0], &fds[1], nullptr, 0));
+#endif
 
   FdInputStream in((AutoCloseFd(fds[0])));
   FdOutputStream out((AutoCloseFd(fds[1])));

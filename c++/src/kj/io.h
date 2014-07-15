@@ -26,6 +26,9 @@
 #include "common.h"
 #include "array.h"
 #include "exception.h"
+#if WIN32
+#include "platform.h"
+#endif
 
 namespace kj {
 
@@ -221,6 +224,12 @@ private:
 // =======================================================================================
 // File descriptor I/O
 
+#if WIN32
+typedef HANDLE fdtype;
+#else
+typedef int fdtype;
+#endif
+
 class AutoCloseFd {
   // A wrapper around a file descriptor which automatically closes the descriptor when destroyed.
   // The wrapper supports move construction for transferring ownership of the descriptor.  If
@@ -231,17 +240,17 @@ class AutoCloseFd {
   // have to call close() yourself and handle errors appropriately.
 
 public:
-  inline AutoCloseFd(): fd(-1) {}
-  inline AutoCloseFd(decltype(nullptr)): fd(-1) {}
-  inline explicit AutoCloseFd(int fd): fd(fd) {}
-  inline AutoCloseFd(AutoCloseFd&& other) noexcept: fd(other.fd) { other.fd = -1; }
+  inline AutoCloseFd() : fd(reinterpret_cast<fdtype>(-1)) {}
+  inline AutoCloseFd(decltype(nullptr)) : fd(reinterpret_cast<fdtype>(-1)) {}
+  inline explicit AutoCloseFd(fdtype fd) : fd(fd) {}
+  inline AutoCloseFd(AutoCloseFd&& other) noexcept: fd(other.fd) { other.fd = reinterpret_cast<fdtype>(-1); }
   KJ_DISALLOW_COPY(AutoCloseFd);
   ~AutoCloseFd() noexcept(false);
 
   inline AutoCloseFd& operator=(AutoCloseFd&& other) {
     AutoCloseFd old(kj::mv(*this));
     fd = other.fd;
-    other.fd = -1;
+    other.fd = reinterpret_cast<fdtype>(-1);
     return *this;
   }
 
@@ -250,14 +259,14 @@ public:
     return *this;
   }
 
-  inline operator int() { return fd; }
-  inline int get() { return fd; }
+  inline operator fdtype() { return fd; }
+  inline fdtype get() { return fd; }
 
   inline bool operator==(decltype(nullptr)) { return fd < 0; }
   inline bool operator!=(decltype(nullptr)) { return fd >= 0; }
 
 private:
-  int fd;
+  fdtype fd;
   UnwindDetector unwindDetector;
 };
 
@@ -265,7 +274,7 @@ class FdInputStream: public InputStream {
   // An InputStream wrapping a file descriptor.
 
 public:
-  explicit FdInputStream(int fd): fd(fd) {}
+  explicit FdInputStream(fdtype fd) : fd(fd) {}
   explicit FdInputStream(AutoCloseFd fd): fd(fd), autoclose(mv(fd)) {}
   KJ_DISALLOW_COPY(FdInputStream);
   ~FdInputStream() noexcept(false);
@@ -273,7 +282,7 @@ public:
   size_t tryRead(void* buffer, size_t minBytes, size_t maxBytes) override;
 
 private:
-  int fd;
+  fdtype fd;
   AutoCloseFd autoclose;
 };
 
@@ -281,7 +290,7 @@ class FdOutputStream: public OutputStream {
   // An OutputStream wrapping a file descriptor.
 
 public:
-  explicit FdOutputStream(int fd): fd(fd) {}
+  explicit FdOutputStream(fdtype fd): fd(fd) {}
   explicit FdOutputStream(AutoCloseFd fd): fd(fd), autoclose(mv(fd)) {}
   KJ_DISALLOW_COPY(FdOutputStream);
   ~FdOutputStream() noexcept(false);
@@ -290,7 +299,7 @@ public:
   void write(ArrayPtr<const ArrayPtr<const byte>> pieces) override;
 
 private:
-  int fd;
+  fdtype fd;
   AutoCloseFd autoclose;
 };
 
