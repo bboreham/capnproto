@@ -38,8 +38,10 @@ public:
 
   ~Thread() noexcept(false);
 
+#ifndef WIN32
   void sendSignal(int signo);
   // Send a Unix signal to the given thread, using pthread_kill or an equivalent.
+#endif
 
   void detach();
   // Don't join the thread in ~Thread().
@@ -50,7 +52,11 @@ private:
   kj::Maybe<kj::Exception> exception;
   bool detached = false;
 
+#ifndef WIN32
   static void* runThread(void* ptr);
+#else
+  friend unsigned __stdcall runThread(void* ptr);
+#endif
 };
 
 }  // namespace kj

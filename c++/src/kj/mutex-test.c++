@@ -22,14 +22,22 @@
 #include "mutex.h"
 #include "debug.h"
 #include "thread.h"
+#ifndef _WIN32
 #include <pthread.h>
+#else
+#include <atomic>
+#endif
 #include "platform.h"
 #include <gtest/gtest.h>
 
 namespace kj {
 namespace {
 
+#ifndef _WIN32
 inline void delay() { usleep(10000); }
+#else
+inline void delay() { Sleep(10); }
+#endif
 
 #if KJ_NO_EXCEPTIONS
 #undef EXPECT_ANY_THROW
@@ -121,20 +129,38 @@ TEST(Mutex, MutexGuarded) {
 
 TEST(Mutex, Lazy) {
   Lazy<uint> lazy;
+#ifndef WIN32
   bool initStarted = false;
+#else
+  std::atomic<bool> initStarted = false;
+#endif
 
   Thread thread([&]() {
+#ifndef WIN32
     EXPECT_EQ(123u, lazy.get([&](SpaceFor<uint>& space) -> Own<uint> {
       __atomic_store_n(&initStarted, true, __ATOMIC_RELAXED);
       delay();
       return space.construct(123);
     }));
-  });
+#else
+    EXPECT_EQ(123u, lazy.get([&](SpaceFor<uint>& space) -> Own<uint> {
+      std::atomic_store_explicit(&initStarted, true, std::memory_order_relaxed);
+      delay();
+      return space.construct(123);
+    }));
+#endif
+});
 
   // Spin until the initializer has been entered in the thread.
+#ifndef WIN32
   while (!__atomic_load_n(&initStarted, __ATOMIC_RELAXED)) {
     sched_yield();
   }
+#else
+  while (!std::atomic_load_explicit(&initStarted, std::memory_order_relaxed)) {
+    SwitchToThread();
+  }
+#endif
 
   EXPECT_EQ(123u, lazy.get([](SpaceFor<uint>& space) { return space.construct(456); }));
   EXPECT_EQ(123u, lazy.get([](SpaceFor<uint>& space) { return space.construct(789); }));

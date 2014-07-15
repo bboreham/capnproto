@@ -231,7 +231,90 @@ void Once::disable() noexcept {
 }
 
 #elif _WIN32
-// FIXME
+Mutex::Mutex() {
+  InitializeSRWLock(&srw);    // Note return type is void; no possible error return to check
+}
+
+Mutex::~Mutex() {
+  // "SRW locks do not need to be explicitly destroyed"
+}
+
+void Mutex::lock(Exclusivity exclusivity) {
+  switch (exclusivity) {
+  case EXCLUSIVE:
+    AcquireSRWLockExclusive(&srw);
+    break;
+  case SHARED:
+    AcquireSRWLockShared(&srw);
+    break;
+  }
+}
+
+void Mutex::unlock(Exclusivity exclusivity) {
+  switch (exclusivity) {
+  case EXCLUSIVE:
+    ReleaseSRWLockExclusive(&srw);
+    break;
+  case SHARED:
+    ReleaseSRWLockShared(&srw);
+    break;
+  }
+}
+
+void Mutex::assertLockedByCaller(Exclusivity exclusivity) {
+  switch (exclusivity) {
+  case EXCLUSIVE:
+    // meaningful comment here FIXME
+    if (TryAcquireSRWLockShared(&srw) != 0) {
+      ReleaseSRWLockShared(&srw);
+      KJ_FAIL_ASSERT("Tried to call assertLockedByCaller*() but lock is not held.");
+    }
+    break;
+  case SHARED:
+    // meaningful comment here FIXME
+    if (TryAcquireSRWLockExclusive(&srw) != 0) {
+      ReleaseSRWLockExclusive(&srw);
+      KJ_FAIL_ASSERT("Tried to call assertLockedByCaller*() but lock is not held.");
+    }
+    break;
+  }
+}
+
+Once::Once(bool startInitialized): state(startInitialized ? INITIALIZED : UNINITIALIZED) {
+  InitializeSRWLock(&srw);
+}
+
+Once::~Once() {
+  // "SRW locks do not need to be explicitly destroyed"
+}
+
+void Once::runOnce(Initializer& init) {
+  AcquireSRWLockExclusive(&srw);
+  KJ_DEFER(ReleaseSRWLockExclusive(&srw));
+
+  if (state != UNINITIALIZED) {
+    return;
+  }
+
+  init.run();
+
+  std::atomic_store_explicit(&state, INITIALIZED, std::memory_order_release);
+}
+
+void Once::reset() {
+  State oldState = INITIALIZED;
+  if (!std::atomic_compare_exchange_strong_explicit(&state, &oldState, UNINITIALIZED,
+    std::memory_order_release, std::memory_order_relaxed)) {
+    KJ_REQUIRE(oldState == DISABLED, "reset() called while not initialized.");
+  }
+}
+
+void Once::disable() noexcept {
+  AcquireSRWLockExclusive(&srw);
+  KJ_DEFER(ReleaseSRWLockExclusive(&srw));
+
+  std::atomic_store_explicit(&state, DISABLED, std::memory_order_relaxed);
+}
 #else
 // =======================================================================================
 // Generic pthreads-based implementation

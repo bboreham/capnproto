@@ -30,6 +30,7 @@
 
 #if _WIN32
 #include "platform.h"
+#include <atomic>
 #elif !KJ_USE_FUTEX
 // On Linux we use futex.  On other platforms we wrap pthreads.
 // TODO(someday):  Write efficient low-level locking primitives for other platforms.
@@ -78,7 +79,7 @@ private:
   static constexpr uint SHARED_COUNT_MASK = EXCLUSIVE_REQUESTED - 1;
 
 #elif _WIN32
-	mutable CRITICAL_SECTION critsec;
+  mutable SRWLOCK srw;
 #else
   mutable pthread_rwlock_t mutex;
 #endif
@@ -91,8 +92,6 @@ public:
 #if KJ_USE_FUTEX
   inline Once(bool startInitialized = false)
       : futex(startInitialized ? INITIALIZED : UNINITIALIZED) {}
-#elif _WIN32
-	// FIXME
 #else
   Once(bool startInitialized = false);
   ~Once();
@@ -111,7 +110,7 @@ public:
 #if KJ_USE_FUTEX
     return __atomic_load_n(&futex, __ATOMIC_ACQUIRE) == INITIALIZED;
 #elif _WIN32
-	  // FIXME
+    return std::atomic_load_explicit(&state, std::memory_order_acquire) == INITIALIZED;
 #else
     return __atomic_load_n(&state, __ATOMIC_ACQUIRE) == INITIALIZED;
 #endif
@@ -132,7 +131,7 @@ public:
 #if KJ_USE_FUTEX
     return __atomic_load_n(&futex, __ATOMIC_ACQUIRE) == DISABLED;
 #elif _WIN32
-	  // FIXME
+    return std::atomic_load_explicit(&state, std::memory_order_acquire) == DISABLED;
 #else
     return __atomic_load_n(&state, __ATOMIC_ACQUIRE) == DISABLED;
 #endif
@@ -150,22 +149,19 @@ private:
     DISABLED
   };
 
-#elif _WIN32
-	enum State {
-		UNINITIALIZED,
-		INITIALIZED,
-		DISABLED
-	};
-	State state;
-	CRITICAL_SECTION critsec;
 #else
   enum State {
     UNINITIALIZED,
     INITIALIZED,
     DISABLED
   };
+#if WIN32
+  std::atomic<State> state;
+  SRWLOCK srw;
+#else
   State state;
   pthread_mutex_t mutex;
+#endif
 #endif
 };
 
@@ -237,6 +233,9 @@ class MutexGuarded {
   // request will block if any write lock requests are outstanding.  So, if thread A takes a read
   // lock, thread B requests a write lock (and starts waiting), and then thread A tries to take
   // another read lock recursively, the result is deadlock.
+  //
+  // On other platforms (Windows), the underlying implementation used here - SRWLock - gives an error 
+  // if you attempt a recursive lock.
 
 public:
   template <typename... Params>

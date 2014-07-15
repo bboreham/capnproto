@@ -22,6 +22,58 @@
 #include "thread.h"
 #include "debug.h"
 #if defined _WIN32
+#include "platform.h"
+#include <process.h>
+
+namespace kj {
+
+Thread::Thread(Function<void()> func): func(kj::mv(func)) {
+  static_assert(sizeof(threadId) >= sizeof(uintptr_t),
+    "uintptr_t is larger than a long long on your platform.  Please port.");
+
+  uintptr_t threadHandle = _beginthreadex(nullptr, 0, &runThread, this, CREATE_SUSPENDED, nullptr);
+  if (threadHandle == -1) {
+    KJ_FAIL_SYSCALL("_beginthreadex", errno);
+  }
+  threadId = threadHandle;
+  ResumeThread(reinterpret_cast<HANDLE>(threadId));
+}
+
+Thread::~Thread() noexcept(false) {
+  if (!detached) {
+    int waitResult = WaitForSingleObject(reinterpret_cast<HANDLE>(threadId), INFINITE);
+    if (waitResult != WAIT_OBJECT_0) {
+      KJ_FAIL_SYSCALL("WaitForSingleObject", waitResult) { break; }
+    }
+    if (!CloseHandle(reinterpret_cast<HANDLE>(threadId))) {
+      KJ_FAIL_SYSCALL("CloseHandle", errno) { break; }
+    }
+
+    KJ_IF_MAYBE(e, exception) {
+      kj::throwRecoverableException(kj::mv(*e));
+    }
+  }
+}
+
+void Thread::detach() {
+  if (!CloseHandle(reinterpret_cast<HANDLE>(threadId))) {
+    KJ_FAIL_SYSCALL("CloseHandle", errno) { break; }
+  }
+
+  detached = true;
+}
+
+unsigned __stdcall runThread(void* ptr) {
+  Thread* thread = reinterpret_cast<Thread*>(ptr);
+  KJ_IF_MAYBE(exception, kj::runCatchingExceptions([&]() {
+    thread->func();
+  })) {
+    thread->exception = kj::mv(*exception);
+  }
+  return 0;
+}
+
+}  // namespace kj
 #else
 #include <pthread.h>
 #include <signal.h>
