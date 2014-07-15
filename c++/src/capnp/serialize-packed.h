@@ -71,7 +71,7 @@ public:
 class PackedFdMessageReader: private kj::FdInputStream, private kj::BufferedInputStreamWrapper,
                              public PackedMessageReader {
 public:
-  PackedFdMessageReader(int fd, ReaderOptions options = ReaderOptions(),
+  PackedFdMessageReader(kj::fdtype fd, ReaderOptions options = ReaderOptions(),
                         kj::ArrayPtr<word> scratchSpace = nullptr);
   // Read message from a file descriptor, without taking ownership of the descriptor.
   // Note that if you want to reuse the descriptor after the reader is destroyed, you'll need to
@@ -98,8 +98,8 @@ void writePackedMessage(kj::OutputStream& output,
 // in succession, consider wrapping your output in a buffered stream in order to reduce system
 // call overhead.
 
-void writePackedMessageToFd(int fd, MessageBuilder& builder);
-void writePackedMessageToFd(int fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments);
+void writePackedMessageToFd(kj::fdtype fd, MessageBuilder& builder);
+void writePackedMessageToFd(kj::fdtype fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments);
 // Write a single packed message to the file descriptor.
 
 // =======================================================================================
@@ -113,7 +113,7 @@ inline void writePackedMessage(kj::OutputStream& output, MessageBuilder& builder
   writePackedMessage(output, builder.getSegmentsForOutput());
 }
 
-inline void writePackedMessageToFd(int fd, MessageBuilder& builder) {
+inline void writePackedMessageToFd(kj::fdtype fd, MessageBuilder& builder) {
   writePackedMessageToFd(fd, builder.getSegmentsForOutput());
 }
 

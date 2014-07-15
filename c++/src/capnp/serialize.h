@@ -121,7 +121,7 @@ class StreamFdMessageReader: private kj::FdInputStream, public InputStreamMessag
   // (e.g. actual disk files), FdFileMessageReader is better, but this will still work.
 
 public:
-  StreamFdMessageReader(int fd, ReaderOptions options = ReaderOptions(),
+  StreamFdMessageReader(kj::fdtype fd, ReaderOptions options = ReaderOptions(),
                         kj::ArrayPtr<word> scratchSpace = nullptr)
       : FdInputStream(fd), InputStreamMessageReader(*this, options, scratchSpace) {}
   // Read message from a file descriptor, without taking ownership of the descriptor.
@@ -134,14 +134,14 @@ public:
   ~StreamFdMessageReader() noexcept(false);
 };
 
-void writeMessageToFd(int fd, MessageBuilder& builder);
+void writeMessageToFd(kj::fdtype fd, MessageBuilder& builder);
 // Write the message to the given file descriptor.
 //
 // This function throws an exception on any I/O error.  If your code is not exception-safe, be sure
 // you catch this exception at the call site.  If throwing an exception is not acceptable, you
 // can implement your own OutputStream with arbitrary error handling and then use writeMessage().
 
-void writeMessageToFd(int fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments);
+void writeMessageToFd(kj::fdtype fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments);
 // Write the segment array to the given file descriptor.
 //
 // This function throws an exception on any I/O error.  If your code is not exception-safe, be sure
@@ -163,7 +163,7 @@ inline void writeMessage(kj::OutputStream& output, MessageBuilder& builder) {
   writeMessage(output, builder.getSegmentsForOutput());
 }
 
-inline void writeMessageToFd(int fd, MessageBuilder& builder) {
+inline void writeMessageToFd(kj::fdtype fd, MessageBuilder& builder) {
   writeMessageToFd(fd, builder.getSegmentsForOutput());
 }
 

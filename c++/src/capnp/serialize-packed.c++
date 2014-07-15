@@ -439,7 +439,7 @@ PackedMessageReader::PackedMessageReader(
 PackedMessageReader::~PackedMessageReader() noexcept(false) {}
 
 PackedFdMessageReader::PackedFdMessageReader(
-    int fd, ReaderOptions options, kj::ArrayPtr<word> scratchSpace)
+    kj::fdtype fd, ReaderOptions options, kj::ArrayPtr<word> scratchSpace)
     : FdInputStream(fd),
       BufferedInputStreamWrapper(static_cast<FdInputStream&>(*this)),
       PackedMessageReader(static_cast<BufferedInputStreamWrapper&>(*this),
@@ -471,7 +471,7 @@ void writePackedMessage(kj::OutputStream& output,
   }
 }
 
-void writePackedMessageToFd(int fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments) {
+void writePackedMessageToFd(kj::fdtype fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments) {
   kj::FdOutputStream output(fd);
   writePackedMessage(output, segments);
 }

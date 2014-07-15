@@ -275,7 +275,7 @@ void writeMessage(kj::OutputStream& output, kj::ArrayPtr<const kj::ArrayPtr<cons
 // =======================================================================================
 StreamFdMessageReader::~StreamFdMessageReader() noexcept(false) {}
 
-void writeMessageToFd(int fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments) {
+void writeMessageToFd(kj::fdtype fd, kj::ArrayPtr<const kj::ArrayPtr<const word>> segments) {
   kj::FdOutputStream stream(fd);
   writeMessage(stream, segments);
 }
