@@ -330,7 +330,11 @@ Debug::Fault::Fault(const char* file, int line, Exception::Nature nature, int er
 
 template <typename Call>
 Debug::SyscallResult Debug::syscall(Call&& call, bool nonblocking) {
+#ifndef WIN32
   while (call() < 0) {
+#else
+  while (call() == 0) {   // Zero indicates failure on Windows
+#endif
     int errorNum = getOsErrorNumber(nonblocking);
     // getOsErrorNumber() returns -1 to indicate EINTR.
     // Also, if nonblocking is true, then it returns 0 on EAGAIN, which will then be treated as a

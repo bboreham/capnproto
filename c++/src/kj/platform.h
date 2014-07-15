@@ -27,10 +27,13 @@
 #if _WIN32
 #include <windef.h>
 #include <winbase.h>
+// and now take back some common words that Windows has #defined
 #undef min
 #undef max
 #undef VOID
 #undef CONST
+#undef DELETE
+#undef FAR
 #else
 #include <unistd.h>
 #include <sys/uio.h>

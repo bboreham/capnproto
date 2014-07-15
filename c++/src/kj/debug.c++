@@ -24,6 +24,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <errno.h>
+#if WIN32
+#include "platform.h"
+#endif
 
 namespace kj {
 namespace _ {  // private
@@ -227,7 +230,11 @@ String Debug::makeContextDescriptionInternal(const char* macroArgs, ArrayPtr<Str
 }
 
 int Debug::getOsErrorNumber(bool nonblocking) {
+#ifndef WIN32
   int result = errno;
+#else
+  DWORD result = GetLastError();
+#endif
 
   // On many systems, EAGAIN and EWOULDBLOCK have the same value, but this is not strictly required
   // by POSIX, so we need to check both.
