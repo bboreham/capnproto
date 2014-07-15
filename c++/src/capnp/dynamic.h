@@ -1228,10 +1228,13 @@ template <typename T>
 DynamicTypeFor<TypeIfEnum<T>> toDynamic(T&& value) {
   return DynamicEnum(Schema::from<kj::Decay<T>>(), static_cast<uint16_t>(value));
 }
+#ifndef MSVC_HACKS
+// MSVC crashes here
 template <typename T>
 typename DynamicTypeFor<FromServer<T>>::Client toDynamic(kj::Own<T>&& value) {
   return typename FromServer<T>::Client(kj::mv(value));
 }
+#endif
 
 inline DynamicValue::Reader::Reader(std::nullptr_t n): type(UNKNOWN) {}
 inline DynamicValue::Builder::Builder(std::nullptr_t n): type(UNKNOWN) {}

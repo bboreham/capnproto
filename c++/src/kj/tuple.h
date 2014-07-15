@@ -149,7 +149,12 @@ class Tuple {
   // The actual Tuple class (used for tuples of size other than 1).
 
 public:
+#ifndef MSVC_HACKS
   Tuple() = default;
+#else
+  // MSVC complains about multiple definitions of a defaulted member if this is defaulted
+  Tuple() {}
+#endif
   template <typename... U>
   constexpr inline Tuple(Tuple<U...>&& other): impl(kj::mv(other)) {}
   template <typename... U>
@@ -228,9 +233,9 @@ struct ExpandAndApplyResult_<Func, Tuple<T...>, Tuple<FirstTypes...>&, Rest...>
 template <typename Func, typename... FirstTypes, typename... Rest, typename... T>
 struct ExpandAndApplyResult_<Func, Tuple<T...>, const Tuple<FirstTypes...>&, Rest...>
     : public ExpandAndApplyResult_<Func, Tuple<T...>, const FirstTypes&..., Rest...> {};
-template <typename Func, typename... T>
-struct ExpandAndApplyResult_<Func, Tuple<T...>> {
-  typedef decltype(instance<Func>()(instance<T&&>()...)) Type;
+template <typename Func, typename... U>
+struct ExpandAndApplyResult_<Func, Tuple<U...>> {
+  typedef decltype(instance<Func>()(instance<U&&>()...)) Type;
 };
 template <typename Func, typename... T>
 using ExpandAndApplyResult = typename ExpandAndApplyResult_<Func, Tuple<>, T...>::Type;
@@ -240,6 +245,21 @@ template <typename Func>
 inline auto expandAndApply(Func&& func) -> ExpandAndApplyResult<Func> {
   return func();
 }
+
+#ifdef MSVC_HACKS
+// Extra specializations because MSVC cannot figure out the recursive template expansions the same way GCC can
+// single-argument version
+template <typename Func, typename First>
+inline auto expandAndApply(Func&& func, First&& first) -> ExpandAndApplyResult<Func, First> {
+	return func(kj::fwd<First>(first));
+}
+
+// two-argument version
+template <typename Func, typename First, typename Second>
+inline auto expandAndApply(Func&& func, First&& first, Second&& second) -> ExpandAndApplyResult<Func, First, Second> {
+	return func(kj::fwd<First>(first), kj::fwd<Second>(second));
+}
+#endif
 
 template <typename Func, typename First, typename... Rest>
 struct ExpandAndApplyFunc {

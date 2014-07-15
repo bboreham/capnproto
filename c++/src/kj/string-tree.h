@@ -126,6 +126,10 @@ template <> constexpr bool isStringTree<StringTree>() { return true; }
 
 inline StringTree&& toStringTreeOrCharSequence(StringTree&& tree) { return kj::mv(tree); }
 inline StringTree toStringTreeOrCharSequence(String&& str) { return StringTree(kj::mv(str)); }
+#ifdef MSVC_HACKS
+// Added this because MSVC couldn't figure out how to stringify a Text::Reader which isa StringPtr.
+inline StringTree toStringTreeOrCharSequence(StringPtr&& strptr) { return StringTree(kj::heapString(kj::mv(strptr))); }
+#endif
 
 template <typename T>
 inline auto toStringTreeOrCharSequence(T&& value)
