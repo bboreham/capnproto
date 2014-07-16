@@ -19,6 +19,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS // don't want to be warned that sprintf is insecure
+#endif
+
 #include "string.h"
 #include "debug.h"
 #include <stdio.h>

@@ -144,6 +144,10 @@ struct TupleImpl<Indexes<indexes...>, Types...>
 
 struct MakeTupleFunc;
 
+#if MSVC_HACKS
+#pragma warning(push) 
+#pragma warning( disable: 4520 )   // MSVC complains about default constructor being multiply defined
+#endif
 template <typename... T>
 class Tuple {
   // The actual Tuple class (used for tuples of size other than 1).
@@ -176,6 +180,9 @@ private:
   friend inline const TypeByIndex<index, U...>& getImpl(const Tuple<U...>& tuple);
   friend struct MakeTupleFunc;
 };
+#if MSVC_HACKS
+#pragma warning(pop)
+#endif
 
 template <>
 class Tuple<> {

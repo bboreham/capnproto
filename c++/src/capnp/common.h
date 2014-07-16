@@ -104,7 +104,7 @@ inline constexpr Kind kind() {
 template <typename T, Kind k = CAPNP_KIND(T)>
 struct List;
 #ifdef MSVC_HACKS
-template <typename T, Kind k = CAPNP_KIND(T)>
+template <typename T, Kind k>
 struct List {}; // to get round friend problem
 #endif
 
@@ -312,13 +312,16 @@ typedef uint16_t WirePointerCount16;
 typedef uint32_t WirePointerCount32;
 typedef uint64_t WirePointerCount64;
 
+#if MSVC_HACKS
+#define unit unit_i
+#endif
 #endif
 
-KJ_CONSTEXPR(const) BitCount BITS = kj::unit<BitCount>();
-KJ_CONSTEXPR(const) ByteCount BYTES = kj::unit<ByteCount>();
-KJ_CONSTEXPR(const) WordCount WORDS = kj::unit<WordCount>();
-KJ_CONSTEXPR(const) ElementCount ELEMENTS = kj::unit<ElementCount>();
-KJ_CONSTEXPR(const) WirePointerCount POINTERS = kj::unit<WirePointerCount>();
+constexpr BitCount BITS = kj::unit<BitCount>();
+constexpr ByteCount BYTES = kj::unit<ByteCount>();
+constexpr WordCount WORDS = kj::unit<WordCount>();
+constexpr ElementCount ELEMENTS = kj::unit<ElementCount>();
+constexpr WirePointerCount POINTERS = kj::unit<WirePointerCount>();
 
 // GCC 4.7 actually gives unused warnings on these constants in opt mode...
 KJ_CONSTEXPR(const) auto BITS_PER_BYTE KJ_UNUSED = 8 * BITS / BYTES;
@@ -329,7 +332,7 @@ KJ_CONSTEXPR(const) auto BITS_PER_POINTER KJ_UNUSED = 64 * BITS / POINTERS;
 KJ_CONSTEXPR(const) auto BYTES_PER_POINTER KJ_UNUSED = 8 * BYTES / POINTERS;
 KJ_CONSTEXPR(const) auto WORDS_PER_POINTER KJ_UNUSED = 1 * WORDS / POINTERS;
 
-KJ_CONSTEXPR(const) WordCount POINTER_SIZE_IN_WORDS = 1 * POINTERS * WORDS_PER_POINTER;
+constexpr WordCount POINTER_SIZE_IN_WORDS = 1 * POINTERS * WORDS_PER_POINTER;
 
 template <typename T>
 inline KJ_CONSTEXPR(const) decltype(BYTES / ELEMENTS) bytesPerElement() {

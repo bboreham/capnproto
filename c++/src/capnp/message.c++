@@ -30,6 +30,7 @@
 #include <vector>
 #include <kj/platform.h>
 #include <errno.h>
+#include <algorithm>   // for std::max
 
 namespace capnp {
 

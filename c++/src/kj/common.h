@@ -69,7 +69,7 @@
 #define _AMD64_
 #endif
 // turn on various hacks elsewhere
-#define MSVC_HACKS
+#define MSVC_HACKS 1
 // VC++ barfs on various uses of constexpr on return values with messages like common.h(1054) : error C3757 : 'kj::ArrayPtr<T>' : type not allowed for 'constexpr' function
 #define CONSTEXPR_RETURN
 // VC++ doesn't support literal class objects - get messages like string.h(294): error C2127: 'kj::_::STR': illegal initialization of 'constexpr' entity with a non-constant expression
@@ -79,6 +79,9 @@
 #define KJ_RESTRICT __restrict
 // Turn off warning "'constexpr' call evaluation failed; function will be called at run-time" because there are a lot of constexpr functions called that way in this codebase.
 #pragma warning (disable: 4592)
+#pragma warning (disable: 4426) // "const': 'constexpr' was ignored (class literal types are not yet supported)" 
+#pragma warning (disable: 4624) // "destructor was implicitly defined as deleted because a base class destructor is inaccessible or deleted"
+#pragma warning (disable: 4521) // "multiple copy constructors specified"
 #elif defined(_MSC_VER)
   #pragma message("As of June 2013, Visual Studio's C++11 support was hopelessly behind what is needed to compile this code.")
 #else
@@ -536,7 +539,10 @@ inline constexpr float nan() { return __builtin_nanf(""); }
 #define INFINITY   ((float)(_HUGE_ENUF * _HUGE_ENUF))
 #define HUGE_VAL   ((double)INFINITY)
 #define NAN        ((float)(INFINITY * 0.0F))
+#pragma warning(push)
+#pragma warning( disable: 4056 )	// "overflow in floating-point constant arithmetic" 
 inline constexpr float inf() { return HUGE_VAL; }
+#pragma warning(pop)
 inline constexpr float nan() { return NAN; }
 #else
 #warning "put definitions for inf and nan for your compiler here"
@@ -674,6 +680,12 @@ struct PlacementNew {};
 inline void* operator new(size_t, kj::_::PlacementNew, void* __p) noexcept {
   return __p;
 }
+
+#if _MSC_VER
+inline void operator delete(void *, kj::_::PlacementNew, void*) noexcept{
+  // does nothing
+}
+#endif
 
 namespace kj {
 
