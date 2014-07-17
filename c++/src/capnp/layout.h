@@ -54,6 +54,11 @@
 // and blow away NaN payloads, because no one uses them anyway.
 #endif
 
+#if _MSC_VER >= 1900
+#define CAPNP_CANONICALIZE_NAN 1
+// Microsoft C++ also has a different NaN format - 0xFFC00000 instead of the expected 0x7FC00000 for float.
+#endif
+
 namespace capnp {
 
 class ClientHook;
@@ -125,7 +130,6 @@ enum class FieldSize: uint8_t {
 typedef decltype(BITS / ELEMENTS) BitsPerElement;
 typedef decltype(POINTERS / ELEMENTS) PointersPerElement;
 
-#ifndef MSVC_HACKS  // too many errors - come back to this @@FIXME
 static constexpr BitsPerElement BITS_PER_ELEMENT_TABLE[8] = {
     0 * BITS / ELEMENTS,
     1 * BITS / ELEMENTS,
@@ -137,10 +141,9 @@ static constexpr BitsPerElement BITS_PER_ELEMENT_TABLE[8] = {
     0 * BITS / ELEMENTS
 };
 
-inline constexpr BitsPerElement dataBitsPerElement(FieldSize size) {
+inline KJ_CONSTEXPR(const) BitsPerElement dataBitsPerElement(FieldSize size) {
   return _::BITS_PER_ELEMENT_TABLE[static_cast<int>(size)];
 }
-#endif
 
 inline constexpr PointersPerElement pointersPerElement(FieldSize size) {
   return size == FieldSize::POINTER ? 1 * POINTERS / ELEMENTS : 0 * POINTERS / ELEMENTS;

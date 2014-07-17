@@ -155,12 +155,17 @@ InputStreamMessageReader::InputStreamMessageReader(
 
   // Read sizes for all segments except the first.  Include padding if necessary.
 #if _MSC_VER
-  _::WireValue<uint32_t> *moreSizes = static_cast<_::WireValue<uint32_t> *>(_alloca((segmentCount & ~1) * sizeof(_::WireValue<uint32_t>)));
+  size_t nbytes = (segmentCount & ~1) * sizeof(_::WireValue<uint32_t>);
+  _::WireValue<uint32_t> *moreSizes = static_cast<_::WireValue<uint32_t> *>(_alloca(nbytes));
 #else
   _::WireValue<uint32_t> moreSizes[segmentCount & ~1];
 #endif
   if (segmentCount > 1) {
+#if _MSC_VER
+    inputStream.read(moreSizes, nbytes);
+#else
     inputStream.read(moreSizes, sizeof(moreSizes));
+#endif
     for (uint i = 0; i < segmentCount - 1; i++) {
       totalWords += moreSizes[i].get();
     }

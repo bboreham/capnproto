@@ -31,9 +31,9 @@
 #include "any.h"
 #include <kj/string.h>
 #include <kj/string-tree.h>
-#if _MSC_VER
+#if WIN32
 #include <kj/platform.h>
-#include <winnt.h>	// for MemoryBarrier()
+#include <intrin.h>
 #endif
 
 namespace capnp {
@@ -97,11 +97,11 @@ struct RawSchema {
     // is required in particular when traversing the dependency list.  RawSchemas for compiled-in
     // types are always initialized; only dynamically-loaded schemas may be lazy.
 
-#if _MSC_VER
-	  MemoryBarrier();
-	  const Initializer* i = lazyInitializer;
+#if WIN32
+    const Initializer* i = lazyInitializer;
+    _ReadWriteBarrier();
 #else
-	  const Initializer* i = __atomic_load_n(&lazyInitializer, __ATOMIC_ACQUIRE);
+    const Initializer* i = __atomic_load_n(&lazyInitializer, __ATOMIC_ACQUIRE);
 #endif
     if (i != nullptr) i->init(this);
   }
@@ -243,15 +243,24 @@ inline constexpr uint sizeInWords() {
     template <> struct RawSchema_<type> { \
       static inline const RawSchema& get() { return schemas::s_##id; } \
     }
+#if _MSC_VER
+// MSVC doesn't like seeing the definition of a constexpr member outside of the class
+#define CAPNP_DEFINE_ENUM(type) 
+#else
 #define CAPNP_DEFINE_ENUM(type) \
     constexpr Kind Kind_<type>::kind; \
     constexpr uint64_t TypeId_<type>::typeId
+#endif
 
 #if _MSC_VER
-// MSVC enforces the rule that a static data member with an in-class initializer must have non-volatile const integral type (and StructSize is not an integral type)
+// MSVC enforces the rule that a static data member with an in-class initializer must have non-volatile const integral type
+// StructSize is not an integral type, so we move its initializer from header to c++ file
 #define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
     template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
     template <> struct StructSize_<type> { \
+      static constexpr WordCount dataWordSize_ = dataWordSize; \
+      static constexpr WirePointerCount pointerCount_ = pointerCount; \
+      static constexpr FieldSize preferredElementEncoding_ = FieldSize::preferredElementEncoding; \
       static KJ_CONSTEXPR(const) StructSize value; \
     }; \
     template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
@@ -259,10 +268,10 @@ inline constexpr uint sizeInWords() {
       static inline const RawSchema& get() { return schemas::s_##id; } \
     }
 #define CAPNP_DEFINE_STRUCT(type) \
-    constexpr Kind Kind_<type>::kind; \
-    constexpr StructSize StructSize_<type>::value = StructSize( \
-          dataWordSize * WORDS, pointerCount * POINTERS, FieldSize::preferredElementEncoding); \
-    constexpr uint64_t TypeId_<type>::typeId
+    KJ_CONSTEXPR(const) StructSize StructSize_<type>::value = StructSize( \
+          dataWordSize_ * WORDS, pointerCount_ * POINTERS, preferredElementEncoding_); \
+//    constexpr Kind Kind_<type>::kind; \
+//    constexpr uint64_t TypeId_<type>::typeId
 #else
 #define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
     template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
@@ -294,8 +303,13 @@ inline constexpr uint sizeInWords() {
     template <> struct RawSchema_<type> { \
       static inline const RawSchema& get() { return schemas::s_##id; } \
     }
+#if MSVC_HACKS
+// MSVC doesn't seem to need or want these constexprs defined.
+#define CAPNP_DEFINE_INTERFACE(type) 
+#else
 #define CAPNP_DEFINE_INTERFACE(type) \
     constexpr Kind Kind_<type>::kind; \
     constexpr uint64_t TypeId_<type>::typeId
+#endif
 
 #endif  // CAPNP_GENERATED_HEADER_SUPPORT_H_

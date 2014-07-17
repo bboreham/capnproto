@@ -1182,7 +1182,12 @@ _::RawSchema* SchemaLoader::Impl::load(const schema::Node::Reader& reader, bool 
     // If this schema is not newly-allocated, it may already be in the wild, specifically in the
     // dependency list of other schemas.  Once the initializer is null, it is live, so we must do
     // a release-store here.
+#ifndef WIN32
     __atomic_store_n(&slot->lazyInitializer, nullptr, __ATOMIC_RELEASE);
+#else
+    _ReadWriteBarrier();
+    slot->lazyInitializer = nullptr;
+#endif
   }
 
   return slot;
@@ -1256,7 +1261,12 @@ _::RawSchema* SchemaLoader::Impl::loadNative(const _::RawSchema* nativeSchema) {
   // If this schema is not newly-allocated, it may already be in the wild, specifically in the
   // dependency list of other schemas.  Once the initializer is null, it is live, so we must do
   // a release-store here.
+#ifndef WIN32
   __atomic_store_n(&result->lazyInitializer, nullptr, __ATOMIC_RELEASE);
+#else
+  _ReadWriteBarrier();
+  result->lazyInitializer = nullptr;
+#endif
 
   return result;
 }
@@ -1413,7 +1423,12 @@ void SchemaLoader::InitializerImpl::init(const _::RawSchema* schema) const {
               "A schema not belonging to this loader used its initializer.");
 
     // Disable the initializer.
+#ifndef WIN32
     __atomic_store_n(&mutableSchema->lazyInitializer, nullptr, __ATOMIC_RELEASE);
+#else
+    _ReadWriteBarrier();
+    mutableSchema->lazyInitializer = nullptr;
+#endif
   }
 }
 

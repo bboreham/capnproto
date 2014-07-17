@@ -173,12 +173,17 @@ struct EzRpcServer::Impl final: public SturdyRefRestorer<Text>, public kj::TaskS
     ExportedCap(kj::StringPtr name, Capability::Client cap)
         : name(kj::heapString(name)), cap(cap) {}
 
+#if MSVC_HACKS
+    ExportedCap() {};
+    // Microsoft's std::map needs different stuff to keep it happy...
+#else
     ExportedCap() = default;
     ExportedCap(const ExportedCap&) = delete;
     ExportedCap(ExportedCap&&) = default;
     ExportedCap& operator=(const ExportedCap&) = delete;
     ExportedCap& operator=(ExportedCap&&) = default;
     // Make std::map happy...
+#endif
   };
 
   std::map<kj::StringPtr, ExportedCap> exportMap;
