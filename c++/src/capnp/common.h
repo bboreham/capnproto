@@ -323,6 +323,10 @@ constexpr WordCount WORDS = kj::unit<WordCount>();
 constexpr ElementCount ELEMENTS = kj::unit<ElementCount>();
 constexpr WirePointerCount POINTERS = kj::unit<WirePointerCount>();
 
+#if MSVC_HACKS
+#undef unit
+#endif
+
 // GCC 4.7 actually gives unused warnings on these constants in opt mode...
 KJ_CONSTEXPR(const) auto BITS_PER_BYTE KJ_UNUSED = 8 * BITS / BYTES;
 KJ_CONSTEXPR(const) auto BITS_PER_WORD KJ_UNUSED = 64 * BITS / WORDS;
