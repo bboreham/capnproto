@@ -249,7 +249,8 @@ void writeMessage(kj::OutputStream& output, kj::ArrayPtr<const kj::ArrayPtr<cons
   KJ_REQUIRE(segments.size() > 0, "Tried to serialize uninitialized message.");
 
 #if _MSC_VER
-  _::WireValue<uint32_t> *table = static_cast<_::WireValue<uint32_t> *>(_alloca(((segments.size() + 2) & ~size_t(1)) * sizeof(_::WireValue<uint32_t>)));
+  size_t nbytes = ((segments.size() + 2) & ~size_t(1)) * sizeof(_::WireValue<uint32_t>);
+  _::WireValue<uint32_t> *table = static_cast<_::WireValue<uint32_t> *>(_alloca(nbytes));
 #else
   _::WireValue<uint32_t> table[(segments.size() + 2) & ~size_t(1)];
 #endif
@@ -267,7 +268,11 @@ void writeMessage(kj::OutputStream& output, kj::ArrayPtr<const kj::ArrayPtr<cons
   }
 
   KJ_STACK_ARRAY(kj::ArrayPtr<const byte>, pieces, segments.size() + 1, 4, 32);
+#if _MSC_VER
+  pieces[0] = kj::arrayPtr(reinterpret_cast<byte*>(table), nbytes);
+#else
   pieces[0] = kj::arrayPtr(reinterpret_cast<byte*>(table), sizeof(table));
+#endif
 
   for (uint i = 0; i < segments.size(); i++) {
     pieces[i + 1] = kj::arrayPtr(reinterpret_cast<const byte*>(segments[i].begin()),
