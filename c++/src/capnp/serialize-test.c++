@@ -289,12 +289,23 @@ TEST(Serialize, WriteMessageEvenSegmentCount) {
 }
 
 TEST(Serialize, FileDescriptors) {
+#if WIN32
+  // Creating a temporary file is a bit of a mouthful on Windows...
+  TCHAR tempPathBuffer[MAX_PATH], filename[MAX_PATH];
+  GetTempPath(MAX_PATH, tempPathBuffer);
+  GetTempFileName(tempPathBuffer, TEXT("cap"), 0, filename);
+  HANDLE hTempFile = CreateFile(filename, (GENERIC_READ|GENERIC_WRITE), /* do not share */ 0, 
+    /* default security */ NULL, CREATE_ALWAYS, FILE_FLAG_DELETE_ON_CLOSE, /* no template */ NULL);
+  ASSERT_NE(hTempFile, INVALID_HANDLE_VALUE);
+  kj::AutoCloseFd tmpfile(hTempFile);
+#else
   char filename[] = "/tmp/capnproto-serialize-test-XXXXXX";
   kj::AutoCloseFd tmpfile(mkstemp(filename));
   ASSERT_GE(tmpfile.get(), 0);
 
   // Unlink the file so that it will be deleted on close.
   EXPECT_EQ(0, unlink(filename));
+#endif
 
   {
     TestMessageBuilder builder(7);
@@ -308,7 +319,12 @@ TEST(Serialize, FileDescriptors) {
     writeMessageToFd(tmpfile.get(), builder);
   }
 
+#if WIN32
+  DWORD retVal = SetFilePointer(tmpfile, 0, 0, FILE_BEGIN);
+  ASSERT_NE(retVal, INVALID_SET_FILE_POINTER);
+#else
   lseek(tmpfile, 0, SEEK_SET);
+#endif
 
   {
     StreamFdMessageReader reader(tmpfile.get());
