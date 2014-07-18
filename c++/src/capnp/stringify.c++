@@ -62,7 +62,7 @@ public:
       return kj::StringTree(kj::mv(items), ", ");
     } else {
 #if _MSC_VER
-		char *delim = static_cast<char*>(_alloca(amount * 2 + 3));
+      char *delim = static_cast<char*>(_alloca(amount * 2 + 3));
 #else
       char delim[amount * 2 + 3];
 #endif
