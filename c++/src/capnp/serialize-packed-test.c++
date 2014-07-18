@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <stdlib.h>
+#include <algorithm>  // for std::max and min
 #include "test-util.h"
 
 namespace capnp {
@@ -133,7 +134,12 @@ void expectPacksTo(std::initializer_list<uint8_t> unpacked,
 
   {
     PackedInputStream packedIn(pipe);
+#if !_MSC_VER
     packedIn.InputStream::read(&*roundTrip.begin(), roundTrip.size());
+#else
+    // Need a different hack since MSVC debug STL asserts on the above trick
+    packedIn.InputStream::read(&roundTrip[0], roundTrip.size());
+#endif
     EXPECT_TRUE(pipe.allRead());
   }
 
@@ -150,7 +156,11 @@ void expectPacksTo(std::initializer_list<uint8_t> unpacked,
 
     {
       PackedInputStream packedIn(pipe);
+#if !_MSC_VER
       packedIn.InputStream::read(&*roundTrip.begin(), roundTrip.size());
+#else
+      packedIn.InputStream::read(&roundTrip[0], roundTrip.size());
+#endif
       EXPECT_TRUE(pipe.allRead());
     }
 
@@ -200,7 +210,11 @@ void expectPacksTo(std::initializer_list<uint8_t> unpacked,
 
   for (uint i = 0; i < 5; i++) {
     PackedInputStream packedIn(pipe);
+#if !_MSC_VER
     packedIn.InputStream::read(&*roundTrip.begin(), roundTrip.size());
+#else
+    packedIn.InputStream::read(&roundTrip[0], roundTrip.size());
+#endif
 
     if (roundTrip !=
         std::string(reinterpret_cast<const char*>(unpacked.begin()), unpacked.size())) {
