@@ -43,6 +43,9 @@ namespace _ {  // private
 // Windows always runs on little-endian machines.  Set these macros so we can use the same #ifdefs as for GCC
 #define __ORDER_LITTLE_ENDIAN__ 1
 #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#define __builtin_bswap16 _byteswap_ushort
+#define __builtin_bswap32 _byteswap_ulong
+#define __builtin_bswap64 _byteswap_uint64
 #endif
 
 #if CAPNP_REVERSE_ENDIAN
@@ -76,7 +79,7 @@ using WireValue = DirectWireValue<T>;
 
 #elif defined(__BYTE_ORDER__) && \
       __BYTE_ORDER__ == CAPNP_OPPOSITE_OF_WIRE_BYTE_ORDER && \
-      defined(__GNUC__) && !CAPNP_DISABLE_ENDIAN_DETECTION
+      (defined(__GNUC__) || defined(_MSC_VER)) && !CAPNP_DISABLE_ENDIAN_DETECTION
 // Big-endian, but GCC's __builtin_bswap() is available.
 
 // TODO(perf):  Use dedicated instructions to read little-endian data on big-endian CPUs that have
