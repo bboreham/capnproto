@@ -404,6 +404,7 @@ TestNetworkAdapter& TestNetwork::add(kj::StringPtr name) {
 class TestRestorer final: public SturdyRefRestorer<test::TestSturdyRefObjectId> {
 public:
   int callCount = 0;
+  int handleCount = 0;
 
   Capability::Client restore(test::TestSturdyRefObjectId::Reader objectId) override {
     switch (objectId.getTag()) {
@@ -418,7 +419,7 @@ public:
       case test::TestSturdyRefObjectId::Tag::TEST_TAIL_CALLER:
         return kj::heap<TestTailCallerImpl>(callCount);
       case test::TestSturdyRefObjectId::Tag::TEST_MORE_STUFF:
-        return kj::heap<TestMoreStuffImpl>(callCount);
+        return kj::heap<TestMoreStuffImpl>(callCount, handleCount);
     }
     KJ_UNREACHABLE;
   }
@@ -527,6 +528,63 @@ TEST(Rpc, Pipelining) {
 
   EXPECT_EQ(3, context.restorer.callCount);
   EXPECT_EQ(1, chainedCallCount);
+}
+
+TEST(Rpc, Release) {
+  TestContext context;
+
+  auto client = context.connect(test::TestSturdyRefObjectId::Tag::TEST_MORE_STUFF)
+      .castAs<test::TestMoreStuff>();
+
+  auto handle1 = client.getHandleRequest().send().wait(context.waitScope).getHandle();
+  auto promise = client.getHandleRequest().send();
+  auto handle2 = promise.wait(context.waitScope).getHandle();
+
+  EXPECT_EQ(2, context.restorer.handleCount);
+
+  handle1 = nullptr;
+
+  for (uint i = 0; i < 16; i++) kj::evalLater([]() {}).wait(context.waitScope);
+  EXPECT_EQ(1, context.restorer.handleCount);
+
+  handle2 = nullptr;
+
+  for (uint i = 0; i < 16; i++) kj::evalLater([]() {}).wait(context.waitScope);
+  EXPECT_EQ(1, context.restorer.handleCount);
+
+  promise = nullptr;
+
+  for (uint i = 0; i < 16; i++) kj::evalLater([]() {}).wait(context.waitScope);
+  EXPECT_EQ(0, context.restorer.handleCount);
+}
+
+TEST(Rpc, ReleaseOnCancel) {
+  // At one time, there was a bug where if a Return contained capabilities, but the client had
+  // canceled the request and already send a Finish (which presumably didn't reach the server before
+  // the Return), then we'd leak those caps. Test for that.
+
+  TestContext context;
+
+  auto client = context.connect(test::TestSturdyRefObjectId::Tag::TEST_MORE_STUFF)
+      .castAs<test::TestMoreStuff>();
+  client.whenResolved().wait(context.waitScope);
+
+  {
+    auto promise = client.getHandleRequest().send();
+
+    // If the server receives cancellation too early, it won't even return a capability in the
+    // results, it will just return "canceled". We want to emulate the case where the return message
+    // and the cancel (finish) message cross paths. It turns out that exactly two evalLater()s get
+    // us there.
+    //
+    // TODO(cleanup): This is fragile, but I'm not sure how else to write it without a ton
+    //   of scaffolding.
+    kj::evalLater([]() {}).wait(context.waitScope);
+    kj::evalLater([]() {}).wait(context.waitScope);
+  }
+
+  for (uint i = 0; i < 16; i++) kj::evalLater([]() {}).wait(context.waitScope);
+  EXPECT_EQ(0, context.restorer.handleCount);
 }
 
 TEST(Rpc, TailCall) {
@@ -819,6 +877,103 @@ TEST(Rpc, Embargo) {
   EXPECT_EQ(3, call3.wait(context.waitScope).getN());
   EXPECT_EQ(4, call4.wait(context.waitScope).getN());
   EXPECT_EQ(5, call5.wait(context.waitScope).getN());
+}
+
+TEST(Rpc, EmbargoError) {
+  TestContext context;
+
+  auto client = context.connect(test::TestSturdyRefObjectId::Tag::TEST_MORE_STUFF)
+      .castAs<test::TestMoreStuff>();
+
+  auto paf = kj::newPromiseAndFulfiller<test::TestCallOrder::Client>();
+
+  auto cap = test::TestCallOrder::Client(kj::mv(paf.promise));
+
+  auto earlyCall = client.getCallSequenceRequest().send();
+
+  auto echoRequest = client.echoRequest();
+  echoRequest.setCap(cap);
+  auto echo = echoRequest.send();
+
+  auto pipeline = echo.getCap();
+
+  auto call0 = getCallSequence(pipeline, 0);
+  auto call1 = getCallSequence(pipeline, 1);
+
+  earlyCall.wait(context.waitScope);
+
+  auto call2 = getCallSequence(pipeline, 2);
+
+  auto resolved = echo.wait(context.waitScope).getCap();
+
+  auto call3 = getCallSequence(pipeline, 3);
+  auto call4 = getCallSequence(pipeline, 4);
+  auto call5 = getCallSequence(pipeline, 5);
+
+  paf.fulfiller->rejectIfThrows([]() { KJ_FAIL_ASSERT("foo"); });
+
+  EXPECT_ANY_THROW(call0.wait(context.waitScope));
+  EXPECT_ANY_THROW(call1.wait(context.waitScope));
+  EXPECT_ANY_THROW(call2.wait(context.waitScope));
+  EXPECT_ANY_THROW(call3.wait(context.waitScope));
+  EXPECT_ANY_THROW(call4.wait(context.waitScope));
+  EXPECT_ANY_THROW(call5.wait(context.waitScope));
+
+  // Verify that we're still connected (there were no protocol errors).
+  getCallSequence(client, 1).wait(context.waitScope);
+}
+
+TEST(Rpc, CallBrokenPromise) {
+  // Tell the server to call back to a promise client, then resolve the promise to an error.
+
+  TestContext context;
+
+  auto client = context.connect(test::TestSturdyRefObjectId::Tag::TEST_MORE_STUFF)
+      .castAs<test::TestMoreStuff>();
+  auto paf = kj::newPromiseAndFulfiller<test::TestInterface::Client>();
+
+  {
+    auto req = client.holdRequest();
+    req.setCap(kj::mv(paf.promise));
+    req.send().wait(context.waitScope);
+  }
+
+  bool returned = false;
+  auto req = client.callHeldRequest().send()
+      .then([&](capnp::Response<test::TestMoreStuff::CallHeldResults>&&) {
+    returned = true;
+  }, [&](kj::Exception&& e) {
+    returned = true;
+    kj::throwRecoverableException(kj::mv(e));
+  }).eagerlyEvaluate(nullptr);
+
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+
+  EXPECT_FALSE(returned);
+
+  paf.fulfiller->rejectIfThrows([]() { KJ_FAIL_ASSERT("foo"); });
+
+  EXPECT_ANY_THROW(req.wait(context.waitScope));
+  EXPECT_TRUE(returned);
+
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+  kj::evalLater([]() {}).wait(context.waitScope);
+
+  // Verify that we're still connected (there were no protocol errors).
+  getCallSequence(client, 1).wait(context.waitScope);
 }
 
 }  // namespace

@@ -195,7 +195,7 @@ public:
           "    capnp eval myschema.capnp someConstant.someList[4]\n"
           "    capnp eval myschema.capnp someConstant.someList[4].anotherField[1][2][3]\n"
           "Since consts can have complex struct types, and since you can define a const using "
-          "imporst and variable substitution, this can be a convenient way to write text-format "
+          "import and variable substitution, this can be a convenient way to write text-format "
           "config files which are compiled to binary before deployment.",
 
           "By default the value is written in text format and can have any type.  The -b, -p, "
@@ -281,6 +281,9 @@ public:
     if (addStandardImportPaths) {
       loader.addImportPath(kj::heapString("/usr/local/include"));
       loader.addImportPath(kj::heapString("/usr/include"));
+#ifdef CAPNP_INCLUDE_DIR
+      loader.addImportPath(kj::heapString(CAPNP_INCLUDE_DIR));
+#endif
       addStandardImportPaths = false;
     }
 

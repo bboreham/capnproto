@@ -494,6 +494,15 @@ struct TestPrintInlineStructs {
   }
 }
 
+struct TestWholeFloatDefault {
+  # At one point, these failed to compile in C++ because it would produce literals like "123f",
+  # which is not valid; it needs to be "123.0f".
+  field @0 :Float32 = 123;
+  bigField @1 :Float32 = 2e30;
+  const constant :Float32 = 456;
+  const bigConstant :Float32 = 4e30;
+}
+
 struct TestEmptyStruct {}
 
 struct TestConstants {
@@ -629,6 +638,8 @@ interface TestTailCaller {
   foo @0 (i :Int32, callee :TestTailCallee) -> TestTailCallee.TailResult;
 }
 
+interface TestHandle {}
+
 interface TestMoreStuff extends(TestCallOrder) {
   # Catch-all type that contains lots of testing methods.
 
@@ -657,6 +668,10 @@ interface TestMoreStuff extends(TestCallOrder) {
   # evalLater()-loops forever, holding `cap`.  Must be canceled.
 
   methodWithDefaults @8 (a :Text, b :UInt32 = 123, c :Text = "foo") -> (d :Text, e :Text = "bar");
+
+  getHandle @9 () -> (handle :TestHandle);
+  # Get a new handle. Tests have an out-of-band way to check the current number of live handles, so
+  # this can be used to test garbage collection.
 }
 
 interface TestKeywordMethods {
