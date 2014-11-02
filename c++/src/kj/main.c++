@@ -29,13 +29,6 @@
 #include <errno.h>
 #include <limits.h>
 
-#if _WIN32
-#include <windows.h>
-#include <io.h>
-#else
-#include <sys/uio.h>
-#endif
-
 namespace kj {
 
 // =======================================================================================
