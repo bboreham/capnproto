@@ -91,7 +91,11 @@ private:
   //   be difficult so I cut my losses.
 
   union {
+#ifdef MSVC_HACKS
+    byte space[1024]; // HACK!  MSVC gives syntax error on the ... line below
+#else
     byte space[maxSize(sizeof(Variants)...)];
+#endif
 
     void* forceAligned;
     // TODO(someday):  Use C++11 alignas() once we require GCC 4.8 / Clang 3.3.

@@ -50,6 +50,7 @@ struct TestType {
   }
 };
 
+#ifdef MSVC_DISABLED
 TEST(Function, Method) {
   TestType obj;
   Function<int(int, int)> f = KJ_BIND_METHOD(obj, foo);
@@ -76,6 +77,7 @@ TEST(Function, Method) {
   EXPECT_EQ(7 + 8 + 4, f(7, 8));
   EXPECT_EQ(9 + 2 + 5, f(2, 9));
 }
+#endif
 
 struct TestConstType {
   mutable int callCount;
@@ -90,6 +92,7 @@ struct TestConstType {
   }
 };
 
+#ifdef MSVC_DISABLED
 TEST(ConstFunction, Method) {
   TestConstType obj;
   ConstFunction<int(int, int)> f = KJ_BIND_METHOD(obj, foo);
@@ -116,6 +119,7 @@ TEST(ConstFunction, Method) {
   EXPECT_EQ(7 + 8 + 4, f(7, 8));
   EXPECT_EQ(9 + 2 + 5, f(2, 9));
 }
+#endif
 
 } // namespace
 } // namespace kj

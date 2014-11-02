@@ -1299,7 +1299,6 @@ _::RawSchema* SchemaLoader::Impl::load(const schema::Node::Reader& reader, bool 
     _ReadWriteBarrier();
     slot->defaultBrand.lazyInitializer = nullptr;
 #endif
-  }
 
   return slot;
 }

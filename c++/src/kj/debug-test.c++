@@ -48,6 +48,7 @@ public:
 
   int outputPipe = -1;
 
+#ifdef MSVC_DISABLED
   bool forkForDeathTest() {
     // This is called when exceptions are disabled.  We fork the process instead and then expect
     // the child to die.
@@ -101,8 +102,10 @@ public:
       return false;
     }
   }
+#endif
 
   void flush() {
+#ifdef MSVC_DISABLED
     if (outputPipe != -1) {
       const char* pos = &*text.begin();
       const char* end = pos + text.size();
@@ -121,6 +124,7 @@ public:
 
       text.clear();
     }
+#endif
   }
 
   void onRecoverableException(Exception&& exception) override {
@@ -312,6 +316,7 @@ TEST(Debug, Catch) {
 #endif
 }
 
+#ifdef MSVC_DISABLED
 TEST(Debug, Syscall) {
   MockExceptionCallback mockCallback;
   int line;
@@ -335,6 +340,7 @@ TEST(Debug, Syscall) {
   EXPECT_LT(result, 0);
   EXPECT_TRUE(recovered);
 }
+#endif
 
 TEST(Debug, Context) {
   MockExceptionCallback mockCallback;

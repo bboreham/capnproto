@@ -38,7 +38,7 @@ TEST(Memory, OwnConst) {
 }
 
 TEST(Memory, CanConvert) {
-  struct Super { virtual ~Super(); };
+  struct Super { virtual ~Super() {} };   // changed for MSVC - seems legit.
   struct Sub: public Super {};
 
   static_assert(canConvert<Own<Sub>, Own<Super>>(), "failure");
