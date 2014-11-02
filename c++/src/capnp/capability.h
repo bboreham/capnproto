@@ -22,6 +22,10 @@
 #ifndef CAPNP_CAPABILITY_H_
 #define CAPNP_CAPABILITY_H_
 
+#if CAPNP_LITE
+#error "RPC APIs, including this header, are not available in lite mode."
+#endif
+
 #include <kj/async.h>
 #include "any.h"
 #include "pointer-helpers.h"
@@ -51,6 +55,33 @@ public:
   KJ_DISALLOW_COPY(RemotePromise);
   RemotePromise(RemotePromise&& other) = default;
   RemotePromise& operator=(RemotePromise&& other) = default;
+};
+
+namespace _ { // private
+struct RawSchema;
+struct RawBrandedSchema;
+extern const RawSchema NULL_INTERFACE_SCHEMA;  // defined in schema.c++
+}  // namespace _ (private)
+
+struct Capability {
+  // A capability without type-safe methods.  Typed capability clients wrap `Client` and typed
+  // capability servers subclass `Server` to dispatch to the regular, typed methods.
+
+  class Client;
+  class Server;
+
+  struct _capnpPrivate {
+    struct IsInterface;
+    static constexpr uint64_t typeId = 0x3;
+    static constexpr Kind kind = Kind::INTERFACE;
+    static constexpr _::RawSchema const* schema = &_::NULL_INTERFACE_SCHEMA;
+
+    static const _::RawBrandedSchema* const brand;
+    // Can't quite declare this one inline without including generated-header-support.h. Avoiding
+    // for now by declaring out-of-line.
+    // TODO(cleanup): Split RawSchema stuff into its own header that can be included here, or
+    //   something.
+  };
 };
 
 // =======================================================================================

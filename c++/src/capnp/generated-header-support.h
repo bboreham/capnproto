@@ -47,6 +47,127 @@ struct DynamicStruct;  // So that it can be declared a friend.
 
 namespace _ {  // private
 
+#if !CAPNP_LITE
+
+struct RawSchema;
+
+struct RawBrandedSchema {
+  // Represents a combination of a schema and bindings for its generic parameters.
+  //
+  // Note that while we generate one `RawSchema` per type, we generate a `RawBrandedSchema` for
+  // every _instance_ of a generic type -- or, at least, every instance that is actually used. For
+  // generated-code types, we use template magic to initialize these.
+
+  const RawSchema* generic;
+  // Generic type which we're branding.
+
+  struct Binding {
+    uint8_t which;       // Numeric value of one of schema::Type::Which.
+
+    bool isImplicitParameter;
+    // For AnyPointer, true if it's an implicit method parameter.
+
+    uint16_t listDepth;  // Number of times to wrap the base type in List().
+
+    uint16_t paramIndex;  // for AnyPointer, if it's a type parameter.
+
+    union {
+      const RawBrandedSchema* schema;  // for struct, enum, interface
+      uint64_t scopeId;                // for AnyPointer, if it's a type parameter
+    };
+
+    Binding() = default;
+    inline constexpr Binding(uint8_t which, uint16_t listDepth, const RawBrandedSchema* schema)
+        : which(which), isImplicitParameter(false), listDepth(listDepth), paramIndex(0),
+          schema(schema) {}
+    inline constexpr Binding(uint8_t which, uint16_t listDepth,
+                             uint64_t scopeId, uint16_t paramIndex)
+        : which(which), isImplicitParameter(false), listDepth(listDepth), paramIndex(paramIndex),
+          scopeId(scopeId) {}
+    inline constexpr Binding(uint8_t which, uint16_t listDepth, uint16_t implicitParamIndex)
+        : which(which), isImplicitParameter(true), listDepth(listDepth),
+          paramIndex(implicitParamIndex), scopeId(0) {}
+  };
+
+  struct Scope {
+    uint64_t typeId;
+    // Type ID whose parameters are being bound.
+
+    const Binding* bindings;
+    uint bindingCount;
+    // Bindings for those parameters.
+
+    bool isUnbound;
+    // This scope is unbound, in the sense of SchemaLoader::getUnbound().
+  };
+
+  const Scope* scopes;
+  // Array of enclosing scopes for which generic variables have been bound, sorted by type ID.
+
+  struct Dependency {
+    uint location;
+    const RawBrandedSchema* schema;
+  };
+
+  const Dependency* dependencies;
+  // Map of branded schemas for dependencies of this type, given our brand. Only dependencies that
+  // are branded are included in this map; if a dependency is missing, use its `defaultBrand`.
+
+  uint32_t scopeCount;
+  uint32_t dependencyCount;
+
+  enum class DepKind {
+    // Component of a Dependency::location. Specifies what sort of dependency this is.
+
+    INVALID,
+    // Mostly defined to ensure that zero is not a valid location.
+
+    FIELD,
+    // Binding needed for a field's type. The index is the field index (NOT ordinal!).
+
+    METHOD_PARAMS,
+    // Bindings needed for a method's params type. The index is the method number.
+
+    METHOD_RESULTS,
+    // Bindings needed for a method's results type. The index is the method ordinal.
+
+    SUPERCLASS,
+    // Bindings needed for a superclass type. The index is the superclass's index in the
+    // "extends" list.
+
+    CONST_TYPE
+    // Bindings needed for the type of a constant. The index is zero.
+  };
+
+  static inline uint makeDepLocation(DepKind kind, uint index) {
+    // Make a number representing the location of a particular dependency within its parent
+    // schema.
+
+    return (static_cast<uint>(kind) << 24) | index;
+  }
+
+  class Initializer {
+  public:
+    virtual void init(const RawBrandedSchema* generic) const = 0;
+  };
+
+  const Initializer* lazyInitializer;
+  // Lazy initializer, invoked by ensureInitialized().
+
+  inline void ensureInitialized() const {
+    // Lazy initialization support.  Invoke to ensure that initialization has taken place.  This
+    // is required in particular when traversing the dependency list.  RawSchemas for compiled-in
+    // types are always initialized; only dynamically-loaded schemas may be lazy.
+
+    const Initializer* i = __atomic_load_n(&lazyInitializer, __ATOMIC_ACQUIRE);
+    if (i != nullptr) i->init(this);
+  }
+
+  inline bool isUnbound() const;
+  // Checks if this schema is the result of calling SchemaLoader::getUnbound(), in which case
+  // binding lookups need to be handled specially.
+};
+
 struct RawSchema {
   // The generated code defines a constant RawSchema for every compiled declaration.
   //
@@ -105,42 +226,145 @@ struct RawSchema {
 #endif
     if (i != nullptr) i->init(this);
   }
+
+  RawBrandedSchema defaultBrand;
+  // Specifies the brand to use for this schema if no generic parameters have been bound to
+  // anything. Generally, in the default brand, all generic parameters are treated as if they were
+  // bound to `AnyPointer`.
 };
 
-template <typename T>
-struct RawSchema_;
-
-template <typename T>
-inline const RawSchema& rawSchema() {
-  return RawSchema_<T>::get();
+inline bool RawBrandedSchema::isUnbound() const {
+  // The unbound schema is the only one that has no scopes but is not the default schema.
+  return scopeCount == 0 && this != &generic->defaultBrand;
 }
 
-template <typename T> struct TypeId_;
+template <typename T, typename CapnpPrivate = typename T::_capnpPrivate, bool = false>
+inline const RawSchema& rawSchema() {
+  return *CapnpPrivate::schema;
+}
+template <typename T, uint64_t id = schemas::EnumInfo<T>::typeId>
+inline const RawSchema& rawSchema() {
+  return *schemas::EnumInfo<T>::schema;
+}
 
-extern const RawSchema NULL_INTERFACE_SCHEMA;  // defined in schema.c++
-template <> struct TypeId_<Capability> { static constexpr uint64_t typeId = 0x03; };
-template <> struct RawSchema_<Capability> {
-  static inline const RawSchema& get() { return NULL_INTERFACE_SCHEMA; }
+template <typename T, typename CapnpPrivate = typename T::_capnpPrivate>
+inline const RawBrandedSchema& rawBrandedSchema() {
+  return *CapnpPrivate::brand;
+}
+template <typename T, uint64_t id = schemas::EnumInfo<T>::typeId>
+inline const RawBrandedSchema& rawBrandedSchema() {
+  return schemas::EnumInfo<T>::schema->defaultBrand;
+}
+
+template <typename TypeTag, typename... Params>
+struct ChooseBrand;
+// If all of `Params` are `AnyPointer`, return the type's default brand. Otherwise, return a
+// specific brand instance. TypeTag is the _capnpPrivate struct for the type in question.
+
+template <typename TypeTag>
+struct ChooseBrand<TypeTag> {
+  // All params were AnyPointer. No specific brand needed.
+  static constexpr _::RawBrandedSchema const* brand = &TypeTag::schema->defaultBrand;
+};
+
+template <typename TypeTag, typename... Rest>
+struct ChooseBrand<TypeTag, AnyPointer, Rest...>: public ChooseBrand<TypeTag, Rest...> {};
+// The first parameter is AnyPointer, so recurse to check the rest.
+
+template <typename TypeTag, typename First, typename... Rest>
+struct ChooseBrand<TypeTag, First, Rest...> {
+  // At least one parameter is not AnyPointer, so use the specificBrand constant.
+  static constexpr _::RawBrandedSchema const* brand = &TypeTag::specificBrand;
+};
+
+template <typename T, Kind k = kind<T>()>
+struct BrandBindingFor_;
+
+#define HANDLE_TYPE(Type, which) \
+  template <> \
+  struct BrandBindingFor_<Type, Kind::PRIMITIVE> { \
+    static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) { \
+      return { which, listDepth, nullptr }; \
+    } \
+  }
+HANDLE_TYPE(Void, 0);
+HANDLE_TYPE(bool, 1);
+HANDLE_TYPE(int8_t, 2);
+HANDLE_TYPE(int16_t, 3);
+HANDLE_TYPE(int32_t, 4);
+HANDLE_TYPE(int64_t, 5);
+HANDLE_TYPE(uint8_t, 6);
+HANDLE_TYPE(uint16_t, 7);
+HANDLE_TYPE(uint32_t, 8);
+HANDLE_TYPE(uint64_t, 9);
+HANDLE_TYPE(float, 10);
+HANDLE_TYPE(double, 11);
+#undef HANDLE_TYPE
+
+template <>
+struct BrandBindingFor_<Text, Kind::BLOB> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 12, listDepth, nullptr };
+  }
+};
+
+template <>
+struct BrandBindingFor_<Data, Kind::BLOB> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 13, listDepth, nullptr };
+  }
 };
 
 template <typename T>
-struct UnionMemberIndex_;
-template <typename T>
-inline uint unionMemberIndex() { return UnionMemberIndex_<T>::value; }
+struct BrandBindingFor_<List<T>, Kind::LIST> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return BrandBindingFor_<T>::get(listDepth + 1);
+  }
+};
 
 template <typename T>
-struct UnionParentType_;
-template <typename T>
-using UnionParentType = typename UnionParentType_<T>::Type;
+struct BrandBindingFor_<T, Kind::ENUM> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 15, listDepth, nullptr };
+  }
+};
 
-kj::StringTree structString(StructReader reader, const RawSchema& schema);
+template <typename T>
+struct BrandBindingFor_<T, Kind::STRUCT> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 16, listDepth, T::_capnpPrivate::brand };
+  }
+};
+
+template <typename T>
+struct BrandBindingFor_<T, Kind::INTERFACE> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 17, listDepth, T::_capnpPrivate::brand };
+  }
+};
+
+template <>
+struct BrandBindingFor_<AnyPointer, Kind::OTHER> {
+  static constexpr RawBrandedSchema::Binding get(uint16_t listDepth) {
+    return { 18, listDepth, 0, 0 };
+  }
+};
+
+template <typename T>
+constexpr RawBrandedSchema::Binding brandBindingFor() {
+  return BrandBindingFor_<T>::get(0);
+}
+
+kj::StringTree structString(StructReader reader, const RawBrandedSchema& schema);
 // Declared here so that we can declare inline stringify methods on generated types.
 // Defined in stringify.c++, which depends on dynamic.c++, which is allowed not to be linked in.
 
 template <typename T>
 inline kj::StringTree structString(StructReader reader) {
-  return structString(reader, rawSchema<T>());
+  return structString(reader, rawBrandedSchema<T>());
 }
+
+#endif  // !CAPNP_LITE
 
 // TODO(cleanup):  Unify ConstStruct and ConstList.
 template <typename T>
@@ -221,8 +445,10 @@ private:
 
 }  // namespace _ (private)
 
-template <typename T>
-inline constexpr uint64_t typeId() { return _::TypeId_<T>::typeId; }
+template <typename T, typename CapnpPrivate = typename T::_capnpPrivate>
+inline constexpr uint64_t typeId() { return CapnpPrivate::typeId; }
+template <typename T, uint64_t id = schemas::EnumInfo<T>::typeId>
+inline constexpr uint64_t typeId() { return id; }
 // typeId<MyType>() returns the type ID as defined in the schema.  Works with structs, enums, and
 // interfaces.
 
@@ -237,79 +463,163 @@ inline constexpr uint sizeInWords() {
 
 }  // namespace capnp
 
+#define CAPNP_COMMA ,
+// Unfortunately needed if the `type` parameter to the macros below contains template parameters --
+// all commas must be replaced with CAPNP_COMMA otherwise they will be interpreted as macro
+// parameter separators! Ugh.
+
+#if CAPNP_LITE
+
+#define CAPNP_DECLARE_SCHEMA(id) \
+    extern ::capnp::word const* const bp_##id
+
 #define CAPNP_DECLARE_ENUM(type, id) \
-    template <> struct Kind_<type> { static constexpr Kind kind = Kind::ENUM; }; \
-    template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
-    template <> struct RawSchema_<type> { \
-      static inline const RawSchema& get() { return schemas::s_##id; } \
+    template <> struct EnumInfo<type##_##id> { \
+      struct IsEnum; \
+      static constexpr uint64_t typeId = 0x##id; \
+      static inline ::capnp::word const* encodedSchema() { return bp_##id; } \
     }
-#if _MSC_VER
-// MSVC doesn't like seeing the definition of a constexpr member outside of the class
-#define CAPNP_DEFINE_ENUM(type) 
-#else
-#define CAPNP_DEFINE_ENUM(type) \
-    constexpr Kind Kind_<type>::kind; \
-    constexpr uint64_t TypeId_<type>::typeId
-#endif
+#define CAPNP_DEFINE_ENUM(type, id) \
+    constexpr uint64_t EnumInfo<type>::typeId
 
-#if _MSC_VER
-// MSVC enforces the rule that a static data member with an in-class initializer must have non-volatile const integral type
-// StructSize is not an integral type, so we move its initializer from header to c++ file
-#define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
-    template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
-    template <> struct StructSize_<type> { \
-      static constexpr WordCount dataWordSize_ = dataWordSize; \
-      static constexpr WirePointerCount pointerCount_ = pointerCount; \
-      static constexpr FieldSize preferredElementEncoding_ = FieldSize::preferredElementEncoding; \
-      static KJ_CONSTEXPR(const) StructSize value; \
-    }; \
-    template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
-    template <> struct RawSchema_<type> { \
-      static inline const RawSchema& get() { return schemas::s_##id; } \
+#define CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
+    struct _capnpPrivate { \
+      struct IsStruct; \
+      static constexpr uint64_t typeId = 0x##id; \
+      static constexpr ::capnp::_::StructSize structSize = ::capnp::_::StructSize( \
+          dataWordSize * ::capnp::WORDS, pointerCount * ::capnp::POINTERS); \
+      static inline ::capnp::word const* encodedSchema() { return ::capnp::schemas::bp_##id; }
+#define CAPNP_DECLARE_STRUCT(id, dataWordSize, pointerCount) \
+    CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
     }
-#define CAPNP_DEFINE_STRUCT(type) \
-    KJ_CONSTEXPR(const) StructSize StructSize_<type>::value = StructSize( \
-          dataWordSize_ * WORDS, pointerCount_ * POINTERS, preferredElementEncoding_); \
-//    constexpr Kind Kind_<type>::kind; \
-//    constexpr uint64_t TypeId_<type>::typeId
-#else
-#define CAPNP_DECLARE_STRUCT(type, id, dataWordSize, pointerCount, preferredElementEncoding) \
-    template <> struct Kind_<type> { static constexpr Kind kind = Kind::STRUCT; }; \
-    template <> struct StructSize_<type> { \
-      static KJ_CONSTEXPR(const) StructSize value = StructSize( \
-          dataWordSize * WORDS, pointerCount * POINTERS, FieldSize::preferredElementEncoding); \
-    }; \
-    template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
-    template <> struct RawSchema_<type> { \
-      static inline const RawSchema& get() { return schemas::s_##id; } \
+#define CAPNP_DECLARE_TEMPLATE_STRUCT(id, dataWordSize, pointerCount, \
+                                      ...) \
+    CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
     }
-#define CAPNP_DEFINE_STRUCT(type) \
-    constexpr Kind Kind_<type>::kind; \
-    constexpr StructSize StructSize_<type>::value; \
-    constexpr uint64_t TypeId_<type>::typeId
-#endif
+#define CAPNP_DEFINE_STRUCT(type, templates, id) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::_::StructSize type::_capnpPrivate::structSize
+#define CAPNP_DEFINE_TEMPLATE_STRUCT(type, templates, id, brandScopesInitializer, \
+                                     brandBindingsInitializer, brandDependenciesInitializer) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::_::StructSize type::_capnpPrivate::structSize
 
-#define CAPNP_DECLARE_UNION(type, parentType, memberIndex) \
-    template <> struct Kind_<type> { static constexpr Kind kind = Kind::UNION; }; \
-    template <> struct UnionMemberIndex_<type> { static constexpr uint value = memberIndex; }; \
-    template <> struct UnionParentType_<type> { typedef parentType Type; }
-#define CAPNP_DEFINE_UNION(type) \
-    constexpr Kind Kind_<type>::kind; \
-    constexpr uint UnionMemberIndex_<type>::value
+#define CAPNP_DECLARE_INTERFACE(id) static_assert(true, "")
+#define CAPNP_DECLARE_TEMPLATE_INTERFACE(id, ...) static_assert(true, "")
+#define CAPNP_DEFINE_INTERFACE(type, templates, id) static_assert(true, "")
+#define CAPNP_DEFINE_TEMPLATE_INTERFACE(type, templates, id, brandScopesInitializer, \
+                                        brandBindingsInitializer, brandDependenciesInitializer) \
+    static_assert(true, "")
 
-#define CAPNP_DECLARE_INTERFACE(type, id) \
-    template <> struct Kind_<type> { static constexpr Kind kind = Kind::INTERFACE; }; \
-    template <> struct TypeId_<type> { static constexpr uint64_t typeId = 0x##id; }; \
-    template <> struct RawSchema_<type> { \
-      static inline const RawSchema& get() { return schemas::s_##id; } \
+#else  // CAPNP_LITE
+
+#define CAPNP_DECLARE_SCHEMA(id) \
+    extern ::capnp::word const* const bp_##id; \
+    extern const ::capnp::_::RawSchema s_##id
+
+#define CAPNP_DECLARE_ENUM(type, id) \
+    template <> struct EnumInfo<type##_##id> { \
+      struct IsEnum; \
+      static constexpr uint64_t typeId = 0x##id; \
+      static inline ::capnp::word const* encodedSchema() { return bp_##id; } \
+      static constexpr ::capnp::_::RawSchema const* schema = &s_##id; \
     }
-#if MSVC_HACKS
-// MSVC doesn't seem to need or want these constexprs defined.
-#define CAPNP_DEFINE_INTERFACE(type) 
-#else
-#define CAPNP_DEFINE_INTERFACE(type) \
-    constexpr Kind Kind_<type>::kind; \
-    constexpr uint64_t TypeId_<type>::typeId
-#endif
+#define CAPNP_DEFINE_ENUM(type, id) \
+    constexpr uint64_t EnumInfo<type>::typeId; \
+    constexpr ::capnp::_::RawSchema const* EnumInfo<type>::schema
+
+#define CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
+    struct _capnpPrivate { \
+      struct IsStruct; \
+      static constexpr uint64_t typeId = 0x##id; \
+      static constexpr ::capnp::Kind kind = ::capnp::Kind::STRUCT; \
+      static constexpr ::capnp::_::StructSize structSize = ::capnp::_::StructSize( \
+          dataWordSize * ::capnp::WORDS, pointerCount * ::capnp::POINTERS); \
+      static inline ::capnp::word const* encodedSchema() { return ::capnp::schemas::bp_##id; } \
+      static constexpr ::capnp::_::RawSchema const* schema = &::capnp::schemas::s_##id;
+#define CAPNP_DECLARE_STRUCT(id, dataWordSize, pointerCount) \
+    CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
+      static constexpr ::capnp::_::RawBrandedSchema const* brand = &schema->defaultBrand; \
+    }
+#define CAPNP_DECLARE_TEMPLATE_STRUCT(id, dataWordSize, pointerCount, ...) \
+    CAPNP_DECLARE_STRUCT_HEADER(id, dataWordSize, pointerCount) \
+      static const ::capnp::_::RawBrandedSchema::Scope brandScopes[]; \
+      static const ::capnp::_::RawBrandedSchema::Binding brandBindings[]; \
+      static const ::capnp::_::RawBrandedSchema::Dependency brandDependencies[]; \
+      static const ::capnp::_::RawBrandedSchema specificBrand; \
+      static constexpr ::capnp::_::RawBrandedSchema const* brand = \
+          ::capnp::_::ChooseBrand<_capnpPrivate, __VA_ARGS__>::brand; \
+    }
+#define CAPNP_DEFINE_STRUCT(type, templates, id) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::Kind type::_capnpPrivate::kind; \
+    templates constexpr ::capnp::_::StructSize type::_capnpPrivate::structSize; \
+    templates constexpr ::capnp::_::RawSchema const* type::_capnpPrivate::schema; \
+    templates constexpr ::capnp::_::RawBrandedSchema const* type::_capnpPrivate::brand
+#define CAPNP_DEFINE_TEMPLATE_STRUCT(type, templates, id, brandScopesInitializer, \
+                                     brandBindingsInitializer, brandDependenciesInitializer) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::Kind type::_capnpPrivate::kind; \
+    templates constexpr ::capnp::_::StructSize type::_capnpPrivate::structSize; \
+    templates constexpr ::capnp::_::RawSchema const* type::_capnpPrivate::schema; \
+    templates constexpr ::capnp::_::RawBrandedSchema const* type::_capnpPrivate::brand; \
+    templates const ::capnp::_::RawBrandedSchema::Scope type::_capnpPrivate::brandScopes[] = \
+        brandScopesInitializer; \
+    templates const ::capnp::_::RawBrandedSchema::Binding type::_capnpPrivate::brandBindings[] = \
+        brandBindingsInitializer; \
+    templates const ::capnp::_::RawBrandedSchema::Dependency type::_capnpPrivate::brandDependencies[] = \
+        brandDependenciesInitializer; \
+    templates const ::capnp::_::RawBrandedSchema type::_capnpPrivate::specificBrand = { \
+      &::capnp::schemas::s_##id, brandScopes, brandDependencies, \
+      sizeof(brandScopes) / sizeof(brandScopes[0]), \
+      sizeof(brandDependencies) / sizeof(brandDependencies[0]), \
+      nullptr \
+    }
+
+#define CAPNP_DECLARE_INTERFACE_HEADER(id) \
+    struct _capnpPrivate { \
+      struct IsInterface; \
+      static constexpr uint64_t typeId = 0x##id; \
+      static constexpr ::capnp::Kind kind = ::capnp::Kind::INTERFACE; \
+      static inline ::capnp::word const* encodedSchema() { return ::capnp::schemas::bp_##id; } \
+      static constexpr ::capnp::_::RawSchema const* schema = &::capnp::schemas::s_##id;
+#define CAPNP_DECLARE_INTERFACE(id) \
+    CAPNP_DECLARE_INTERFACE_HEADER(id) \
+      static constexpr ::capnp::_::RawBrandedSchema const* brand = &schema->defaultBrand; \
+    }
+#define CAPNP_DECLARE_TEMPLATE_INTERFACE(id, ...) \
+    CAPNP_DECLARE_INTERFACE_HEADER(id) \
+      static const ::capnp::_::RawBrandedSchema::Scope brandScopes[]; \
+      static const ::capnp::_::RawBrandedSchema::Binding brandBindings[]; \
+      static const ::capnp::_::RawBrandedSchema::Dependency brandDependencies[]; \
+      static const ::capnp::_::RawBrandedSchema specificBrand; \
+      static constexpr ::capnp::_::RawBrandedSchema const* brand = \
+          ::capnp::_::ChooseBrand<_capnpPrivate, __VA_ARGS__>::brand; \
+    }
+#define CAPNP_DEFINE_INTERFACE(type, templates, id) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::Kind type::_capnpPrivate::kind; \
+    templates constexpr ::capnp::_::RawSchema const* type::_capnpPrivate::schema; \
+    templates constexpr ::capnp::_::RawBrandedSchema const* type::_capnpPrivate::brand
+#define CAPNP_DEFINE_TEMPLATE_INTERFACE(type, templates, id, brandScopesInitializer, \
+                                        brandBindingsInitializer, brandDependenciesInitializer) \
+    templates constexpr uint64_t type::_capnpPrivate::typeId; \
+    templates constexpr ::capnp::Kind type::_capnpPrivate::kind; \
+    templates constexpr ::capnp::_::RawSchema const* type::_capnpPrivate::schema; \
+    templates constexpr ::capnp::_::RawBrandedSchema const* type::_capnpPrivate::brand; \
+    templates const ::capnp::_::RawBrandedSchema::Scope type::_capnpPrivate::brandScopes[] = \
+        brandScopesInitializer; \
+    templates const ::capnp::_::RawBrandedSchema::Binding type::_capnpPrivate::brandBindings[] = \
+        brandBindingsInitializer; \
+    templates const ::capnp::_::RawBrandedSchema::Dependency type::_capnpPrivate::brandDependencies[] = \
+        brandDependenciesInitializer; \
+    templates const ::capnp::_::RawBrandedSchema type::_capnpPrivate::specificBrand = { \
+      &::capnp::schemas::s_##id, brandScopes, brandDependencies, \
+      sizeof(brandScopes) / sizeof(brandScopes[0]), \
+      sizeof(brandDependencies) / sizeof(brandDependencies[0]), \
+      nullptr \
+    }
+
+#endif  // CAPNP_LITE, else
 
 #endif  // CAPNP_GENERATED_HEADER_SUPPORT_H_

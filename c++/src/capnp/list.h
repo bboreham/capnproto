@@ -168,6 +168,8 @@ struct List<T, Kind::PRIMITIVE> {
     friend struct ToDynamic_;
   };
 
+  class Pipeline {};
+
 private:
   inline static _::ListBuilder initPointer(_::PointerBuilder builder, uint size) {
     return builder.initList(_::elementSizeForType<T>(), size * ELEMENTS);
@@ -256,8 +258,7 @@ struct List<T, Kind::STRUCT> {
       // expanded under any circumstances.  We're just going to throw it away anyway, and
       // transferContentFrom() already carefully compares the struct sizes before transferring.
       builder.getStructElement(index * ELEMENTS).transferContentFrom(
-          orphan.builder.asStruct(_::StructSize(
-              0 * WORDS, 0 * POINTERS, _::FieldSize::VOID)));
+          orphan.builder.asStruct(_::StructSize(0 * WORDS, 0 * POINTERS)));
     }
     inline void setWithCaveats(uint index, const typename T::Reader& reader) {
       // Mostly behaves like you'd expect `set` to behave, but with a caveat originating from
@@ -285,6 +286,8 @@ struct List<T, Kind::STRUCT> {
     template <typename U, Kind K>
     friend struct ToDynamic_;
   };
+
+  class Pipeline {};
 
 private:
   inline static _::ListBuilder initPointer(_::PointerBuilder builder, uint size) {
@@ -393,6 +396,8 @@ struct List<List<T>, Kind::LIST> {
     friend struct ToDynamic_;
   };
 
+  class Pipeline {};
+
 private:
   inline static _::ListBuilder initPointer(_::PointerBuilder builder, uint size) {
     return builder.initList(_::FieldSize::POINTER, size * ELEMENTS);
@@ -486,6 +491,8 @@ struct List<T, Kind::BLOB> {
     template <typename U, Kind K>
     friend struct ToDynamic_;
   };
+
+  class Pipeline {};
 
 private:
   inline static _::ListBuilder initPointer(_::PointerBuilder builder, uint size) {

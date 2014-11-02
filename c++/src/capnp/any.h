@@ -71,9 +71,11 @@ struct AnyPointer {
     inline ReaderFor<T> getAs(InterfaceSchema schema) const;
     // Only valid for T = DynamicCapability.  Requires `#include <capnp/dynamic.h>`.
 
+#if !CAPNP_LITE
     kj::Own<ClientHook> getPipelinedCap(kj::ArrayPtr<const PipelineOp> ops) const;
     // Used by RPC system to implement pipelining.  Applications generally shouldn't use this
     // directly.
+#endif  // !CAPNP_LITE
 
   private:
     _::PointerReader reader;
@@ -181,6 +183,7 @@ struct AnyPointer {
     friend class CapBuilderContext;
   };
 
+#if !CAPNP_LITE
   class Pipeline {
   public:
     inline Pipeline(decltype(nullptr)) {}
@@ -212,6 +215,7 @@ struct AnyPointer {
     friend class LocalClient;
     friend class PipelineHook;
   };
+#endif  // !CAPNP_LITE
 };
 
 template <>
@@ -284,6 +288,8 @@ private:
 // These relate to capabilities, but we don't declare them in capability.h because generated code
 // for structs needs to know about these, even in files that contain no interfaces.
 
+#if !CAPNP_LITE
+
 struct PipelineOp {
   // Corresponds to rpc.capnp's PromisedAnswer.Op.
 
@@ -320,8 +326,14 @@ public:
   }
 };
 
+#endif  // !CAPNP_LITE
+
 // =======================================================================================
 // Inline implementation details
+
+namespace _ {  // private
+template <> struct Kind_<AnyPointer> { static constexpr Kind kind = Kind::OTHER; };
+}  // namespace _ (private)
 
 inline MessageSize AnyPointer::Reader::targetSize() const {
   return reader.targetSize().asPublic();
@@ -388,18 +400,18 @@ inline Orphan<AnyPointer> AnyPointer::Builder::disown() {
   return Orphan<AnyPointer>(builder.disown());
 }
 
-template <> struct ReaderFor_ <AnyPointer, Kind::UNKNOWN> { typedef AnyPointer::Reader Type; };
-template <> struct BuilderFor_<AnyPointer, Kind::UNKNOWN> { typedef AnyPointer::Builder Type; };
+template <> struct ReaderFor_ <AnyPointer, Kind::OTHER> { typedef AnyPointer::Reader Type; };
+template <> struct BuilderFor_<AnyPointer, Kind::OTHER> { typedef AnyPointer::Builder Type; };
 
 template <>
-struct Orphanage::GetInnerReader<AnyPointer, Kind::UNKNOWN> {
+struct Orphanage::GetInnerReader<AnyPointer, Kind::OTHER> {
   static inline _::PointerReader apply(const AnyPointer::Reader& t) {
     return t.reader;
   }
 };
 
 template <>
-struct Orphanage::GetInnerBuilder<AnyPointer, Kind::UNKNOWN> {
+struct Orphanage::GetInnerBuilder<AnyPointer, Kind::OTHER> {
   static inline _::PointerBuilder apply(AnyPointer::Builder& t) {
     return t.builder;
   }
@@ -449,6 +461,35 @@ template <>
 inline Orphan<AnyPointer> Orphan<AnyPointer>::releaseAs() {
   return kj::mv(*this);
 }
+
+namespace _ {  // private
+
+// Specialize PointerHelpers for AnyPointer.
+
+template <>
+struct PointerHelpers<AnyPointer, Kind::OTHER> {
+  static inline AnyPointer::Reader get(PointerReader reader,
+                                       const void* defaultValue = nullptr,
+                                       uint defaultBytes = 0) {
+    return AnyPointer::Reader(reader);
+  }
+  static inline AnyPointer::Builder get(PointerBuilder builder,
+                                        const void* defaultValue = nullptr,
+                                        uint defaultBytes = 0) {
+    return AnyPointer::Builder(builder);
+  }
+  static inline void set(PointerBuilder builder, AnyPointer::Reader value) {
+    AnyPointer::Builder(builder).set(value);
+  }
+  static inline void adopt(PointerBuilder builder, Orphan<AnyPointer>&& value) {
+    builder.adopt(kj::mv(value.builder));
+  }
+  static inline Orphan<AnyPointer> disown(PointerBuilder builder) {
+    return Orphan<AnyPointer>(builder.disown());
+  }
+};
+
+}  // namespace _ (private)
 
 }  // namespace capnp
 

@@ -148,7 +148,7 @@ static kj::StringTree print(const DynamicValue::Reader& value,
       }
     case DynamicValue::TEXT:
     case DynamicValue::DATA: {
-      // TODO(someday):  Data probably shouldn't be printed as a string.
+      // TODO(now): Data should be printed as binary literal.
       kj::ArrayPtr<const char> chars;
       if (value.getType() == DynamicValue::DATA) {
         auto reader = value.as<Data>();
@@ -298,8 +298,8 @@ kj::StringTree KJ_STRINGIFY(const DynamicList::Builder& value) { return stringif
 
 namespace _ {  // private
 
-kj::StringTree structString(StructReader reader, const RawSchema& schema) {
-  return stringify(DynamicStruct::Reader(StructSchema(&schema), reader));
+kj::StringTree structString(StructReader reader, const RawBrandedSchema& schema) {
+  return stringify(DynamicStruct::Reader(Schema(&schema).asStruct(), reader));
 }
 
 }  // namespace _ (private)

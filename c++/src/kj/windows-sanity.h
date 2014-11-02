@@ -19,45 +19,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#include "common.h"
-#include <gtest/gtest.h>
-#include <kj/string.h>
-#include <kj/debug.h>
+#ifndef KJ_WINDOWS_SANITY_H_
+#define KJ_WINDOWS_SANITY_H_
 
-#if HAVE_CONFIG_H
-#include "config.h"
+#ifndef _INC_WINDOWS
+#error "windows.h needs to be included before kj/windows-sanity.h (or perhaps you don't need either?)"
 #endif
 
-namespace capnp {
-namespace {
-
-TEST(Common, Version) {
-#ifdef VERSION
-  auto expectedVersion =
-      kj::str(CAPNP_VERSION_MAJOR, '.', CAPNP_VERSION_MINOR, '.', CAPNP_VERSION_MICRO);
-  auto devVersion =
-      kj::str(CAPNP_VERSION_MAJOR, '.', CAPNP_VERSION_MINOR, "-dev");
-  kj::StringPtr actualVersion = VERSION;
-  KJ_ASSERT(actualVersion == expectedVersion ||
-            actualVersion.startsWith(kj::str(expectedVersion, '-')) ||
-            (actualVersion == devVersion && CAPNP_VERSION_MICRO == 0),
-            expectedVersion, actualVersion);
-#endif
+namespace win32 {
+  const auto ERROR_ = ERROR;
+#undef ERROR
+  const auto ERROR = ERROR_;
 }
 
-struct ExampleStruct {
-  struct _capnpPrivate {
-    struct IsStruct;
-  };
-};
-struct ExampleInterface {
-  struct _capnpPrivate {
-    struct IsInterface;
-  };
-};
+using win32::ERROR;
 
-static_assert(_::Kind_<ExampleStruct>::kind == Kind::STRUCT, "Kind SFINAE failed.");
-static_assert(_::Kind_<ExampleInterface>::kind == Kind::INTERFACE, "Kind SFINAE failed.");
-
-}  // namespace
-}  // namespace capnp
+#endif  // KJ_WINDOWS_SANITY_H_

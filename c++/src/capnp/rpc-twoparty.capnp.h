@@ -12,13 +12,29 @@
 
 
 namespace capnp {
-namespace rpc {
-namespace twoparty {
+namespace schemas {
 
-enum class Side: uint16_t {
+CAPNP_DECLARE_SCHEMA(9fd69ebc87b9719c);
+enum class Side_9fd69ebc87b9719c: uint16_t {
   SERVER,
   CLIENT,
 };
+CAPNP_DECLARE_ENUM(Side, 9fd69ebc87b9719c);
+CAPNP_DECLARE_SCHEMA(e615e371b1036508);
+CAPNP_DECLARE_SCHEMA(b88d09a9c5f39817);
+CAPNP_DECLARE_SCHEMA(89f389b6fd4082c1);
+CAPNP_DECLARE_SCHEMA(b47f4979672cb59d);
+CAPNP_DECLARE_SCHEMA(95b29059097fca83);
+CAPNP_DECLARE_SCHEMA(9d263a3630b7ebee);
+
+}  // namespace schemas
+}  // namespace capnp
+
+namespace capnp {
+namespace rpc {
+namespace twoparty {
+
+typedef ::capnp::schemas::Side_9fd69ebc87b9719c Side;
 
 struct SturdyRefHostId {
   SturdyRefHostId() = delete;
@@ -26,6 +42,8 @@ struct SturdyRefHostId {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(e615e371b1036508, 1, 0);
 };
 
 struct ProvisionId {
@@ -34,6 +52,8 @@ struct ProvisionId {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(b88d09a9c5f39817, 1, 0);
 };
 
 struct RecipientId {
@@ -42,6 +62,8 @@ struct RecipientId {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(89f389b6fd4082c1, 0, 0);
 };
 
 struct ThirdPartyCapId {
@@ -50,6 +72,8 @@ struct ThirdPartyCapId {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(b47f4979672cb59d, 0, 0);
 };
 
 struct JoinKeyPart {
@@ -58,6 +82,8 @@ struct JoinKeyPart {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(95b29059097fca83, 1, 0);
 };
 
 struct JoinResult {
@@ -66,57 +92,11 @@ struct JoinResult {
   class Reader;
   class Builder;
   class Pipeline;
+
+  CAPNP_DECLARE_STRUCT(9d263a3630b7ebee, 1, 1);
 };
 
-}  // namespace
-}  // namespace
-}  // namespace
-
 // =======================================================================================
-
-namespace capnp {
-namespace schemas {
-
-extern const ::capnp::_::RawSchema s_9fd69ebc87b9719c;
-extern const ::capnp::_::RawSchema s_e615e371b1036508;
-extern const ::capnp::_::RawSchema s_b88d09a9c5f39817;
-extern const ::capnp::_::RawSchema s_89f389b6fd4082c1;
-extern const ::capnp::_::RawSchema s_b47f4979672cb59d;
-extern const ::capnp::_::RawSchema s_95b29059097fca83;
-extern const ::capnp::_::RawSchema s_9d263a3630b7ebee;
-
-}  // namespace schemas
-namespace _ {  // private
-
-CAPNP_DECLARE_ENUM(
-    ::capnp::rpc::twoparty::Side, 9fd69ebc87b9719c);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::SturdyRefHostId, e615e371b1036508,
-    1, 0, TWO_BYTES);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::ProvisionId, b88d09a9c5f39817,
-    1, 0, FOUR_BYTES);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::RecipientId, 89f389b6fd4082c1,
-    0, 0, VOID);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::ThirdPartyCapId, b47f4979672cb59d,
-    0, 0, VOID);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::JoinKeyPart, 95b29059097fca83,
-    1, 0, EIGHT_BYTES);
-CAPNP_DECLARE_STRUCT(
-    ::capnp::rpc::twoparty::JoinResult, 9d263a3630b7ebee,
-    1, 1, INLINE_COMPOSITE);
-
-}  // namespace _ (private)
-}  // namespace capnp
-
-// =======================================================================================
-
-namespace capnp {
-namespace rpc {
-namespace twoparty {
 
 class SturdyRefHostId::Reader {
 public:
@@ -129,24 +109,25 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
   inline  ::capnp::rpc::twoparty::Side getSide() const;
 
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(SturdyRefHostId::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(SturdyRefHostId::Reader reader) {
-  return ::capnp::_::structString<SturdyRefHostId>(reader._reader);
-}
 
 class SturdyRefHostId::Builder {
 public:
@@ -160,22 +141,21 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
   inline  ::capnp::rpc::twoparty::Side getSide();
   inline void setSide( ::capnp::rpc::twoparty::Side value);
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(SturdyRefHostId::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(SturdyRefHostId::Builder builder) {
-  return ::capnp::_::structString<SturdyRefHostId>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class SturdyRefHostId::Pipeline {
 public:
   typedef SturdyRefHostId Pipelines;
@@ -186,9 +166,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 class ProvisionId::Reader {
 public:
@@ -201,24 +182,25 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
   inline  ::uint32_t getJoinId() const;
 
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(ProvisionId::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(ProvisionId::Reader reader) {
-  return ::capnp::_::structString<ProvisionId>(reader._reader);
-}
 
 class ProvisionId::Builder {
 public:
@@ -232,22 +214,21 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
   inline  ::uint32_t getJoinId();
   inline void setJoinId( ::uint32_t value);
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(ProvisionId::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(ProvisionId::Builder builder) {
-  return ::capnp::_::structString<ProvisionId>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class ProvisionId::Pipeline {
 public:
   typedef ProvisionId Pipelines;
@@ -258,9 +239,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 class RecipientId::Reader {
 public:
@@ -273,22 +255,23 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(RecipientId::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(RecipientId::Reader reader) {
-  return ::capnp::_::structString<RecipientId>(reader._reader);
-}
 
 class RecipientId::Builder {
 public:
@@ -302,19 +285,18 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(RecipientId::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(RecipientId::Builder builder) {
-  return ::capnp::_::structString<RecipientId>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class RecipientId::Pipeline {
 public:
   typedef RecipientId Pipelines;
@@ -325,9 +307,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 class ThirdPartyCapId::Reader {
 public:
@@ -340,22 +323,23 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(ThirdPartyCapId::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(ThirdPartyCapId::Reader reader) {
-  return ::capnp::_::structString<ThirdPartyCapId>(reader._reader);
-}
 
 class ThirdPartyCapId::Builder {
 public:
@@ -369,19 +353,18 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(ThirdPartyCapId::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(ThirdPartyCapId::Builder builder) {
-  return ::capnp::_::structString<ThirdPartyCapId>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class ThirdPartyCapId::Pipeline {
 public:
   typedef ThirdPartyCapId Pipelines;
@@ -392,9 +375,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 class JoinKeyPart::Reader {
 public:
@@ -407,6 +391,12 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
   inline  ::uint32_t getJoinId() const;
 
   inline  ::uint16_t getPartCount() const;
@@ -415,20 +405,15 @@ public:
 
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(JoinKeyPart::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(JoinKeyPart::Reader reader) {
-  return ::capnp::_::structString<JoinKeyPart>(reader._reader);
-}
 
 class JoinKeyPart::Builder {
 public:
@@ -442,6 +427,9 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
   inline  ::uint32_t getJoinId();
   inline void setJoinId( ::uint32_t value);
@@ -454,16 +442,12 @@ public:
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(JoinKeyPart::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(JoinKeyPart::Builder builder) {
-  return ::capnp::_::structString<JoinKeyPart>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class JoinKeyPart::Pipeline {
 public:
   typedef JoinKeyPart Pipelines;
@@ -474,9 +458,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 class JoinResult::Reader {
 public:
@@ -489,6 +474,12 @@ public:
     return _reader.totalSize().asPublic();
   }
 
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const {
+    return ::capnp::_::structString(_reader, *_capnpPrivate::brand);
+  }
+#endif  // !CAPNP_LITE
+
   inline  ::uint32_t getJoinId() const;
 
   inline bool getSucceeded() const;
@@ -498,20 +489,15 @@ public:
 
 private:
   ::capnp::_::StructReader _reader;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::_::PointerHelpers;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::List;
   friend class ::capnp::MessageBuilder;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(JoinResult::Reader reader);
 };
-
-inline ::kj::StringTree KJ_STRINGIFY(JoinResult::Reader reader) {
-  return ::capnp::_::structString<JoinResult>(reader._reader);
-}
 
 class JoinResult::Builder {
 public:
@@ -525,6 +511,9 @@ public:
   inline Reader asReader() const { return *this; }
 
   inline ::capnp::MessageSize totalSize() const { return asReader().totalSize(); }
+#if !CAPNP_LITE
+  inline ::kj::StringTree toString() const { return asReader().toString(); }
+#endif  // !CAPNP_LITE
 
   inline  ::uint32_t getJoinId();
   inline void setJoinId( ::uint32_t value);
@@ -538,16 +527,12 @@ public:
 
 private:
   ::capnp::_::StructBuilder _builder;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
   friend class ::capnp::Orphanage;
-  friend ::kj::StringTree KJ_STRINGIFY(JoinResult::Builder builder);
 };
 
-inline ::kj::StringTree KJ_STRINGIFY(JoinResult::Builder builder) {
-  return ::capnp::_::structString<JoinResult>(builder._builder.asReader());
-}
-
+#if !CAPNP_LITE
 class JoinResult::Pipeline {
 public:
   typedef JoinResult Pipelines;
@@ -558,9 +543,10 @@ public:
 
 private:
   ::capnp::AnyPointer::Pipeline _typeless;
-  template <typename T, ::capnp::Kind k>
+  template <typename, ::capnp::Kind>
   friend struct ::capnp::ToDynamic_;
 };
+#endif  // !CAPNP_LITE
 
 // =======================================================================================
 

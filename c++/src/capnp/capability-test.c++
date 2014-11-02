@@ -767,6 +767,59 @@ TEST(Capability, KeywordMethods) {
   EXPECT_TRUE(called);
 }
 
+TEST(Capability, Generics) {
+  kj::EventLoop loop;
+  kj::WaitScope waitScope(loop);
+
+  typedef test::TestGenerics<TestAllTypes>::Interface<List<uint32_t>> Interface;
+  Interface::Client client = nullptr;
+
+  auto request = client.callRequest();
+  request.setBaz("hello");
+  initTestMessage(request.initInnerBound().initFoo());
+  initTestMessage(request.initInnerUnbound().getFoo().initAs<TestAllTypes>());
+
+  auto promise = request.send().then([](capnp::Response<Interface::CallResults>&& response) {
+    // This doesn't actually execute; we're just checking that it compiles.
+    List<uint32_t>::Reader qux = response.getQux();
+    qux.size();
+    checkTestMessage(response.getGen().getFoo());
+  }, [](kj::Exception&& e) {});
+
+  promise.wait(waitScope);
+}
+
+TEST(Capability, Generics2) {
+  MallocMessageBuilder builder;
+  auto root = builder.getRoot<test::TestUseGenerics>();
+
+  root.initCap().setFoo(test::TestInterface::Client(nullptr));
+}
+
+TEST(Capability, ImplicitParams) {
+  kj::EventLoop loop;
+  kj::WaitScope waitScope(loop);
+
+  typedef test::TestImplicitMethodParams Interface;
+  Interface::Client client = nullptr;
+
+  capnp::Request<Interface::CallParams<Text, TestAllTypes>,
+                 test::TestGenerics<Text, TestAllTypes>> request =
+      client.callRequest<Text, TestAllTypes>();
+  request.setFoo("hello");
+  initTestMessage(request.initBar());
+
+  auto promise = request.send()
+      .then([](capnp::Response<test::TestGenerics<Text, TestAllTypes>>&& response) {
+    // This doesn't actually execute; we're just checking that it compiles.
+    Text::Reader text = response.getFoo();
+    text.size();
+    checkTestMessage(response.getRev().getFoo());
+  }, [](kj::Exception&& e) {});
+
+  promise.wait(waitScope);
+}
+
 }  // namespace
 }  // namespace _
 }  // namespace capnp

@@ -38,6 +38,15 @@ namespace capnp {
 #define CAPNP_VERSION \
   (CAPNP_VERSION_MAJOR * 1000000 + CAPNP_VERSION_MINOR * 1000 + CAPNP_VERSION_MICRO)
 
+#ifdef _MSC_VER
+#define CAPNP_LITE 1
+// MSVC only supports "lite" mode for now, due to missing C++11 features.
+#endif
+
+#ifndef CAPNP_LITE
+#define CAPNP_LITE 0
+#endif
+
 typedef unsigned int uint;
 
 struct Void {
@@ -65,12 +74,27 @@ enum class Kind: uint8_t {
   UNION,
   INTERFACE,
   LIST,
-  UNKNOWN
+
+  OTHER
+  // Some other type which is often a type parameter to Cap'n Proto templates, but which needs
+  // special handling. This includes types like AnyPointer, Dynamic*, etc.
 };
+
+namespace schemas {
+
+template <typename T>
+struct EnumInfo;
+
+}  // namespace schemas
 
 namespace _ {  // private
 
-template <typename T> struct Kind_ { static constexpr Kind kind = Kind::UNKNOWN; };
+template <typename T, typename = typename T::_capnpPrivate::IsStruct> uint8_t kindSfinae(int);
+template <typename T, typename = typename T::_capnpPrivate::IsInterface> uint16_t kindSfinae(int);
+template <typename T, typename = typename schemas::EnumInfo<T>::IsEnum> uint32_t kindSfinae(int);
+template <typename T> uint64_t kindSfinae(...);
+
+template <typename T, size_t s = sizeof(kindSfinae<T>(0))> struct Kind_;
 
 template <> struct Kind_<Void> { static constexpr Kind kind = Kind::PRIMITIVE; };
 template <> struct Kind_<bool> { static constexpr Kind kind = Kind::PRIMITIVE; };
@@ -87,19 +111,30 @@ template <> struct Kind_<double> { static constexpr Kind kind = Kind::PRIMITIVE;
 template <> struct Kind_<Text> { static constexpr Kind kind = Kind::BLOB; };
 template <> struct Kind_<Data> { static constexpr Kind kind = Kind::BLOB; };
 
+template <typename T> struct Kind_<T, sizeof(uint8_t)> { static constexpr Kind kind = Kind::STRUCT; };
+template <typename T> struct Kind_<T, sizeof(uint16_t)> { static constexpr Kind kind = Kind::INTERFACE; };
+template <typename T> struct Kind_<T, sizeof(uint32_t)> { static constexpr Kind kind = Kind::ENUM; };
+
 }  // namespace _ (private)
 
-template <typename T>
+#if CAPNP_LITE
+
+#define CAPNP_KIND(T) ::capnp::_::Kind_<T>::kind
+// Avoid constexpr methods in lite mode (MSVC is bad at constexpr).
+
+#else  // CAPNP_LITE
+
+template <typename T, Kind k = _::Kind_<T>::kind>
 inline constexpr Kind kind() {
-  return _::Kind_<T>::kind;
+  // This overload of kind() matches types which have a Kind_ specialization.
+
+  return k;
 }
 
-// MSVC (as of CTP June 14) doesn't seem to get that constexpr kind here is a constant expression; claims it is a variable
-#ifdef MSVC_HACKS
-#define CAPNP_KIND(T) ::capnp::_::Kind_<T>::kind
-#else
 #define CAPNP_KIND(T) ::capnp::kind<T>()
-#endif
+// Use this macro rather than kind<T>() in any code which must work in lite mode.
+
+#endif  // CAPNP_LITE, else
 
 template <typename T, Kind k = CAPNP_KIND(T)>
 struct List;
@@ -113,21 +148,9 @@ template <typename T> struct ListElementType_<List<T>> { typedef T Type; };
 template <typename T> using ListElementType = typename ListElementType_<T>::Type;
 
 namespace _ {  // private
-template <typename T, Kind k> struct Kind_<List<T, k>> { static constexpr Kind kind = Kind::LIST; };
-}  // namespace _ (private)
-
-struct Capability {
-  // A capability without type-safe methods.  Typed capability clients wrap `Client` and typed
-  // capability servers subclass `Server` to dispatch to the regular, typed methods.
-  //
-  // Contents defined in capability.h.  Declared here just so we can specialize Kind_.
-
-  class Client;
-  class Server;
+template <typename T, Kind k> struct Kind_<List<T, k>, sizeof(uint64_t)> {
+  static constexpr Kind kind = Kind::LIST;
 };
-
-namespace _ {  // private
-template <> struct Kind_<Capability> { static constexpr Kind kind = Kind::INTERFACE; };
 }  // namespace _ (private)
 
 template <typename T, Kind k = CAPNP_KIND(T)> struct ReaderFor_ { typedef typename T::Reader Type; };
@@ -144,7 +167,11 @@ template <typename T> struct BuilderFor_<T, Kind::INTERFACE> { typedef typename 
 template <typename T> using BuilderFor = typename BuilderFor_<T>::Type;
 // The type returned by List<T>::Builder::operator[].
 
+<<<<<<< HEAD
 template <typename T, Kind k = CAPNP_KIND(T)> struct PipelineFor_ { typedef typename T::Pipeline Type; };
+=======
+template <typename T, Kind k = CAPNP_KIND(T)> struct PipelineFor_ { typedef typename T::Pipeline Type;};
+>>>>>>> master
 template <typename T> struct PipelineFor_<T, Kind::INTERFACE> { typedef typename T::Client Type; };
 template <typename T> using PipelineFor = typename PipelineFor_<T>::Type;
 

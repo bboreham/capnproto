@@ -28,6 +28,10 @@
 #include "platform.h"
 #endif
 
+#if _WIN32
+#define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
+#endif
+
 namespace kj {
 namespace _ {  // private
 
