@@ -149,7 +149,7 @@ TEST(Mutex, Lazy) {
       return space.construct(123);
     }));
 #endif
-});
+  });
 
   // Spin until the initializer has been entered in the thread.
 #ifndef WIN32

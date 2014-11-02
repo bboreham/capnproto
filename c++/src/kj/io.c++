@@ -229,6 +229,7 @@ void ArrayOutputStream::write(const void* src, size_t size) {
 }
 
 // =======================================================================================
+
 AutoCloseFd::~AutoCloseFd() noexcept(false) {
 #ifndef WIN32
   if (fd >= 0) {

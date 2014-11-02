@@ -281,7 +281,7 @@ struct List<T, Kind::STRUCT> {
     inline Iterator end() { return Iterator(this, size()); }
 
   private:
-	  _::ListBuilder builder;
+    _::ListBuilder builder;
     friend class Orphanage;
     template <typename U, Kind K>
     friend struct ToDynamic_;
@@ -333,7 +333,7 @@ struct List<List<T>, Kind::LIST> {
 
   private:
     _::ListReader reader;
-	template <typename U, Kind K>
+    template <typename U, Kind K>
     friend struct _::PointerHelpers;
     template <typename U, Kind K>
     friend struct List;
@@ -391,7 +391,7 @@ struct List<List<T>, Kind::LIST> {
 
   private:
     _::ListBuilder builder;
-	friend class Orphanage;
+    friend class Orphanage;
     template <typename U, Kind K>
     friend struct ToDynamic_;
   };
@@ -439,7 +439,7 @@ struct List<T, Kind::BLOB> {
 
   private:
     _::ListReader reader;
-	template <typename U, Kind K>
+    template <typename U, Kind K>
     friend struct _::PointerHelpers;
     template <typename U, Kind K>
     friend struct List;
