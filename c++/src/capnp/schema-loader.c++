@@ -1294,11 +1294,14 @@ _::RawSchema* SchemaLoader::Impl::load(const schema::Node::Reader& reader, bool 
     // dependency list of other schemas.  Once the initializer is null, it is live, so we must do
     // a release-store here.
 #ifndef WIN32
+    __atomic_store_n(&slot->lazyInitializer, nullptr, __ATOMIC_RELEASE);
     __atomic_store_n(&slot->defaultBrand.lazyInitializer, nullptr, __ATOMIC_RELEASE);
 #else
     _ReadWriteBarrier();
+    slot->lazyInitializer = nullptr;
     slot->defaultBrand.lazyInitializer = nullptr;
 #endif
+  }
 
   return slot;
 }
@@ -1382,14 +1385,12 @@ _::RawSchema* SchemaLoader::Impl::loadNative(const _::RawSchema* nativeSchema) {
   // a release-store here.
 #ifndef WIN32
   __atomic_store_n(&result->lazyInitializer, nullptr, __ATOMIC_RELEASE);
-<<<<<<< HEAD
+  __atomic_store_n(&result->defaultBrand.lazyInitializer, nullptr, __ATOMIC_RELEASE);
 #else
   _ReadWriteBarrier();
   result->lazyInitializer = nullptr;
+  result->defaultBrand.lazyInitializer = nullptr;
 #endif
-=======
-  __atomic_store_n(&result->defaultBrand.lazyInitializer, nullptr, __ATOMIC_RELEASE);
->>>>>>> master
 
   return result;
 }
@@ -1870,9 +1871,11 @@ void SchemaLoader::InitializerImpl::init(const _::RawSchema* schema) const {
 
     // Disable the initializer.
 #ifndef WIN32
+    __atomic_store_n(&mutableSchema->lazyInitializer, nullptr, __ATOMIC_RELEASE);
     __atomic_store_n(&mutableSchema->defaultBrand.lazyInitializer, nullptr, __ATOMIC_RELEASE);
 #else
     _ReadWriteBarrier();
+    mutableSchema->lazyInitializer = nullptr;
     mutableSchema->defaultBrand.lazyInitializer = nullptr;
 #endif
   }
