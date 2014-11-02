@@ -243,7 +243,7 @@ AutoCloseFd::~AutoCloseFd() noexcept(false) {
 #else
       if (CloseHandle(fd) == 0) {
 #endif
-      KJ_FAIL_SYSCALL("close", errno, fd) {
+        KJ_FAIL_SYSCALL("close", errno, fd) {
           break;
         }
       }

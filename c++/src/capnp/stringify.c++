@@ -188,7 +188,7 @@ static kj::StringTree print(const DynamicValue::Reader& value,
     }
     case DynamicValue::LIST: {
       auto listValue = value.as<DynamicList>();
-	  auto which = listValue.getSchema().whichElementType();
+      auto which = listValue.getSchema().whichElementType();
 #ifdef MSVC_HACKS
 	  // Open-code what KJ_MAP does because MSVC can't instantiate the template
 	  auto builder = kj::heapArrayBuilder<kj::StringTree>(listValue.size());

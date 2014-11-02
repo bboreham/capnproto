@@ -215,7 +215,7 @@ class Quantity {
   //   }
 
 #ifndef MSVC_HACKS
-	static_assert(isIntegral<Number>(), "Underlying type for Quantity must be integer.");
+  static_assert(isIntegral<Number>(), "Underlying type for Quantity must be integer.");
 #endif
 
 public:
