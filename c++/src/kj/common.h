@@ -664,7 +664,7 @@ private:
 };
 
 template <typename T>
-inline constexpr Repeat<Decay<T>> repeat(T&& value, size_t count) {
+inline CONSTEXPR_RETURN Repeat<Decay<T>> repeat(T&& value, size_t count) {
   // Returns a fake iterable which contains `count` repeats of `value`.  Useful for e.g. creating
   // a bunch of spaces:  `kj::repeat(' ', indent * 2)`
 
